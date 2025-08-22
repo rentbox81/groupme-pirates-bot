@@ -1,0 +1,21 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Environment variables and secrets
+.env
+*.env
+bot.env
+ids_file
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

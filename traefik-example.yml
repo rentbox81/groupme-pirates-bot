@@ -1,0 +1,57 @@
+# Example Traefik configuration for reference
+# This is NOT part of the bot deployment - it's just for reference
+# if you need to set up Traefik on your server
+
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Dashboard (optional, secure it!)
+    command:
+      # Enable Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      
+      # Define entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      
+      # Enable automatic HTTPS with Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.email=your-email@rentbox.us"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      
+      # Optional: Enable dashboard (secure this in production!)
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - traefik
+    labels:
+      # Optional: Secure the dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.rentbox.us`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+networks:
+  traefik:
+    external: true
+
+# To create the external network, run:
+# docker network create traefik

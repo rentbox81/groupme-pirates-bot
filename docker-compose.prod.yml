@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  groupme-bot:
+    build: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+      
+      # Define the network
+      - "traefik.docker.network=traefik"
+      
+      # HTTP router configuration
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.rule=Host(`${TEAM_NAME:-team}bot.${BASE_DOMAIN:-example.com}`)"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.entrypoints=websecure"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      
+      # Service configuration
+      - "traefik.http.services.${TEAM_NAME:-team}bot.loadbalancer.server.port=18080"
+      
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.rule=Host(`${TEAM_NAME:-team}bot.${BASE_DOMAIN:-example.com}`)"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.entrypoints=web"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      
+      # Security headers middleware (optional)
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.middlewares=security-headers,${TEAM_NAME:-team}bot-ratelimit"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Robots-Tag=noindex"
+      
+      # Rate limiting (optional)
+      - "traefik.http.middlewares.${TEAM_NAME:-team}bot-ratelimit.ratelimit.burst=100"
+      - "traefik.http.middlewares.${TEAM_NAME:-team}bot-ratelimit.ratelimit.average=50"
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+networks:
+  traefik:
+    external: true
