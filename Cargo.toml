@@ -51,3 +51,7 @@ ical = "0.10"
 
 # Random number generation for Pirates facts
 rand = "0.8"
+
+# Google Service Account authentication
+jsonwebtoken = "9.3"
+base64 = "0.22"

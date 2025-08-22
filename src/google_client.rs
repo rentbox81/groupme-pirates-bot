@@ -2,6 +2,9 @@ use chrono::{Local, NaiveDate, NaiveDateTime};
 use reqwest::Client;
 use tracing::{info, warn, error};
 use std::io::BufReader;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use crate::auth::ServiceAccountAuth;
 
 use crate::config::Config;
 use crate::error::{BotError, Result};
@@ -11,13 +14,31 @@ use crate::models::{SheetsResponse};
 pub struct GoogleClient {
     client: Client,
     config: Config,
+    service_auth: Option<Arc<Mutex<ServiceAccountAuth>>>,
 }
 
 impl GoogleClient {
     pub fn new(config: Config) -> Self {
+        let service_auth = if let Ok(service_account_path) = std::env::var("GOOGLE_SERVICE_ACCOUNT_JSON") {
+            match ServiceAccountAuth::new(&service_account_path) {
+                Ok(auth) => {
+                    tracing::info!("Service account authentication initialized successfully");
+                    Some(Arc::new(Mutex::new(auth)))
+                },
+                Err(e) => {
+                    tracing::warn!("Failed to initialize service account auth: {}", e);
+                    None
+                }
+            }
+        } else {
+            tracing::info!("Using API key authentication (read-only)");
+            None
+        };
+
         Self {
             client: Client::new(),
             config,
+            service_auth,
         }
     }
 
@@ -100,40 +121,68 @@ impl GoogleClient {
     }
 
     pub async fn get_sheets_data(&self) -> Result<Vec<(NaiveDate, String, String, String, String, String, String, String)>> {
-        let url = format!(
-            "https://sheets.googleapis.com/v4/spreadsheets/{}/values/A2:H?key={}",
-            &self.config.sheet_id,
-            &self.config.google_api_key
-        );
+        let sheets_response: crate::models::SheetsResponse = if let Some(service_auth) = &self.service_auth {
+            // Use service account authentication
+            let mut auth = service_auth.lock().await;
+            let access_token = auth.get_access_token().await?;
+            
+            let url = format!(
+                "https://sheets.googleapis.com/v4/spreadsheets/{}/values/A2:H",
+                &self.config.sheet_id
+            );
 
-        info!("Fetching sheet data from Google Sheets API");
+            info!("Fetching sheet data from Google Sheets API (using service account)");
 
-        let response = self.client
-            .get(&url)
-            .send()
-            .await?;
+            let response = self.client
+                .get(&url)
+                .bearer_auth(access_token)
+                .send()
+                .await?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            error!("Sheets API request failed: {} - {}", status, error_text);
-            return Err(BotError::GoogleApi(format!("Sheets API returned {}: {}", status, error_text)));
-        }
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                error!("Sheets API request failed: {} - {}", status, error_text);
+                return Err(BotError::GoogleApi(format!("Sheets API returned {}: {}", status, error_text)));
+            }
 
-        let sheets_response: SheetsResponse = response.json().await?;
-        let mut data = Vec::new();
+            response.json().await?
+        } else {
+            // Fallback to API key method
+            let url = format!(
+                "https://sheets.googleapis.com/v4/spreadsheets/{}/values/A2:H?key={}",
+                &self.config.sheet_id,
+                &self.config.google_api_key
+            );
 
-        if let Some(values) = sheets_response.values {
-            for (row_index, row) in values.iter().enumerate() {
-                if row.is_empty() {
-                    continue;
-                }
+            info!("Fetching sheet data from Google Sheets API (using API key)");
 
-                let date_str = &row[0];
-                match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                    Ok(event_date) => {
-                        // Extract data based on your actual sheet structure:
-                        // A: Date, B: Time, C: Location, D: Home Team, E: Snacks, F: Livestream, G: Scoreboard, H: Pitch Count
+            let response = self.client
+                .get(&url)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                error!("Sheets API request failed: {} - {}", status, error_text);
+                return Err(BotError::GoogleApi(format!("Sheets API returned {}: {}", status, error_text)));
+            }
+
+            response.json().await?
+        };
+
+        info!("Sheet data retrieved: {} rows", 
+            sheets_response.values.as_ref().map(|v| v.len()).unwrap_or(0));
+
+        // Common parsing logic for both methods
+        let values = sheets_response.values.unwrap_or_default();
+        let mut parsed_data = Vec::new();
+        
+        for (row_idx, row) in values.iter().enumerate() {
+            if row.len() >= 4 && !row[0].trim().is_empty() {
+                match NaiveDate::parse_from_str(&row[0], "%Y-%m-%d") {
+                    Ok(date) => {
                         let time = row.get(1).cloned().unwrap_or_default();
                         let location = row.get(2).cloned().unwrap_or_default();
                         let home_team = row.get(3).cloned().unwrap_or_default();
@@ -142,26 +191,19 @@ impl GoogleClient {
                         let scoreboard = row.get(6).cloned().unwrap_or_default();
                         let pitch_count = row.get(7).cloned().unwrap_or_default();
                         
-                        data.push((
-                            event_date,     // date from column A
-                            time,           // time from column B
-                            location,       // location from column C
-                            snacks,         // snacks from column E
-                            livestream,     // livestream from column F
-                            scoreboard,     // scoreboard from column G
-                            pitch_count,    // pitch_count from column H
-                            home_team,      // home_team from column D
-                        ));
+                        parsed_data.push((date, time, location, home_team, snacks, livestream, scoreboard, pitch_count));
                     }
                     Err(e) => {
-                        warn!("Failed to parse date in row {}: '{}' - {}", row_index + 2, date_str, e);
+                        warn!("Failed to parse date in row {}: {} - {}", row_idx + 2, row[0], e);
                     }
                 }
             }
         }
-
-        info!("Retrieved {} rows from sheets", data.len());
-        Ok(data)
+        
+        parsed_data.sort_by(|a, b| a.0.cmp(&b.0));
+        
+        info!("Parsed {} sheet rows", parsed_data.len());
+        Ok(parsed_data)
     }
 
     fn parse_ical_datetime(&self, datetime_str: &str) -> Result<NaiveDate> {
@@ -239,36 +281,46 @@ impl GoogleClient {
     /// Update a specific cell in the Google Sheet
     pub async fn update_sheet_cell(&self, row: usize, column: &str, value: &str) -> Result<()> {
         let range = format!("{}{}:{}{}", column, row, column, row);
-        let url = format!(
-            "https://sheets.googleapis.com/v4/spreadsheets/{}/values/{}?valueInputOption=RAW&key={}",
-            &self.config.sheet_id,
-            urlencoding::encode(&range),
-            &self.config.google_api_key
-        );
-
-        let update_data = serde_json::json!({
-            "values": [[value]]
-        });
-
-        info!("Updating sheet cell {}{} with value: {}", column, row, value);
         
-        let response = self.client
-            .put(&url)
-            .json(&update_data)
-            .send()
-            .await?;
+        if let Some(service_auth) = &self.service_auth {
+            // Use service account authentication
+            let mut auth = service_auth.lock().await;
+            let access_token = auth.get_access_token().await?;
+            
+            let url = format!(
+                "https://sheets.googleapis.com/v4/spreadsheets/{}/values/{}?valueInputOption=RAW",
+                &self.config.sheet_id,
+                urlencoding::encode(&range)
+            );
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            error!("Sheet update failed: {} - {}", status, error_text);
-            return Err(BotError::GoogleApi(format!("Sheet update returned {}: {}", status, error_text)));
+            let update_data = serde_json::json!({
+                "values": [[value]]
+            });
+
+            info!("Updating sheet cell {}{} with value: {} (using service account)", column, row, value);
+            
+            let response = self.client
+                .put(&url)
+                .bearer_auth(access_token)
+                .json(&update_data)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                error!("Sheet update failed: {} - {}", status, error_text);
+                return Err(BotError::GoogleApi(format!("Sheet update returned {}: {}", status, error_text)));
+            }
+
+            info!("Successfully updated sheet cell {}{}", column, row);
+            Ok(())
+        } else {
+            // Fallback to API key (read-only) with clear error message
+            warn!("Write operation attempted with API key - requires service account");
+            Err(BotError::GoogleApi("Write operations require service account authentication".to_string()))
         }
-
-        info!("Successfully updated sheet cell {}{}", column, row);
-        Ok(())
     }
-    
     /// Find the row number for a specific date in the sheet
     pub async fn find_sheet_row_by_date(&self, target_date: chrono::NaiveDate) -> Result<Option<usize>> {
         let sheets_data = self.get_sheets_data().await?;

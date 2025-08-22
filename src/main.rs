@@ -1,4 +1,5 @@
 pub mod config;
+pub mod auth;
 pub mod error;
 pub mod models;
 pub mod google_client;
@@ -47,7 +48,7 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
         }
         Err(e) => {
             warn!("Failed to parse command: {}", e);
-            let error_response = format!("Sorry, I couldn't understand that command. {}", e);
+            let error_response = "❌ Command error. Code: CMD001";
             if let Err(send_error) = data.bot_service.send_response(&error_response).await {
                 error!("Failed to send error response: {}", send_error);
             }
@@ -64,7 +65,7 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
         }
         Err(e) => {
             error!("Failed to handle command: {}", e);
-            let error_response = "Sorry, I encountered an error while processing your request. Please try again later.";
+            let error_response = "❌ Processing error. Code: SVC001";
             if let Err(send_error) = data.bot_service.send_response(error_response).await {
                 error!("Failed to send error response: {}", send_error);
             }

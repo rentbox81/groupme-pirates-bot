@@ -319,12 +319,12 @@ impl BotService {
                                 Ok(format!("✅ {} has been assigned to {} for {} ({})!", 
                                          person, role, date, event.event_summary))
                             } else {
-                                Ok(format!("❌ Unable to assign {} to {} - role may not exist.", person, role))
+                                Ok("❌ Assignment failed. Code: VOL002".to_string())
                             }
                         }
                         Err(e) => {
                             warn!("Failed to update Google Sheet: {}", e);
-                            Ok(format!("❌ Failed to update volunteer assignment: {}. Please try again.", e))
+                            Ok("❌ Update failed. Code: VOL001".to_string())
                         }
                     }
                 } else {
@@ -340,7 +340,7 @@ impl BotService {
                         Ok(format!("❌ {} is already assigned to {} for {} ({}).", 
                                  current, role, date, event.event_summary))
                     } else {
-                        Ok(format!("❌ Unable to assign volunteer - unknown error."))
+                        Ok("❌ Assignment failed. Code: VOL003".to_string())
                     }
                 }
             }

@@ -1,4 +1,5 @@
 pub mod config;
+pub mod auth;
 pub mod error;
 pub mod google_client;
 pub mod groupme_client;
