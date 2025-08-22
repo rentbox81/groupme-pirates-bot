@@ -1,229 +1,255 @@
-# Multi-Team GroupMe Bot Deployment Guide
+# 🏴‍☠️ GroupMe Pirates Bot - Easy Deployment Guide
 
-## Overview
+Deploy the GroupMe Pirates Bot using pre-built Docker images - no compilation required!
 
-This bot is designed to support multiple teams using a configurable domain pattern:
-**`{TEAM_NAME}bot.{BASE_DOMAIN}`**
+## Quick Start
 
-Examples:
-- **Pirates Team**: `https://piratesbot.rentbox.us`
-- **Dragons Team**: `https://dragonsbot.rentbox.us`  
-- **Eagles Team**: `https://eaglesbot.myteambot.com`
+### Prerequisites
+- Docker and Docker Compose installed
+- A GroupMe bot created at https://dev.groupme.com/bots  
+- A Google Sheet with your team schedule
+- (Optional) Google Service Account for volunteer assignment features
 
-## Configuration
+### 1. Download Deployment Files
 
-### 1. Set Up Your Environment
-
-Copy the template and customize for your team:
 ```bash
+# Create deployment directory
+mkdir groupme-pirates-bot && cd groupme-pirates-bot
+
+# Download the production docker-compose.yml
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
+
+# Download environment template  
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/.env.template
+```
+
+### 2. Configure Environment
+
+```bash
+# Copy template to .env file
 cp .env.template .env
+
+# Edit the configuration
+nano .env
 ```
 
-Edit `.env` with your team's values:
+Fill in your configuration:
+
 ```bash
-# Team-specific configuration
-TEAM_NAME=pirates            # lowercase, used for subdomain
-BASE_DOMAIN=rentbox.us       # your registered domain
-GROUPME_BOT_NAME=PirateBot   # matches your team theme
+# GroupMe Bot Configuration
+GROUPME_BOT_ID=your_actual_groupme_bot_id
+GROUPME_BOT_NAME=PirateBot
 
-# Your actual API keys and IDs
-GROUPME_BOT_ID=your_actual_bot_id
-SHEET_ID=your_actual_sheet_id
-GOOGLE_API_KEY=your_actual_api_key
-CALENDAR_WEBCAL_URL=your_actual_webcal_url
+# Google Sheets Configuration  
+SHEET_ID=your_google_sheet_id_from_url
+GOOGLE_API_KEY=your_google_api_key
+
+# Calendar Configuration
+CALENDAR_WEBCAL_URL=your_team_calendar_webcal_url
+
+# Domain Configuration (for Traefik reverse proxy)
+TEAM_NAME=pirates
+BASE_DOMAIN=yourdomain.com
 ```
 
-### 2. Domain Examples
+### 3. (Optional) Service Account Setup
 
-| Team Name | Configuration | Result URL |
-|-----------|---------------|------------|
-| Pirates | `TEAM_NAME=pirates` | `https://piratesbot.rentbox.us` |
-| Dragons | `TEAM_NAME=dragons` | `https://dragonsbot.rentbox.us` |  
-| Eagles | `TEAM_NAME=eagles` | `https://eaglesbot.myteambot.com` |
-| Lions | `TEAM_NAME=lions` | `https://lionsbot.sportsbot.net` |
+For volunteer assignment features, add a Google Service Account:
 
-## Prerequisites
-
-### 1. DNS Configuration
-Set up DNS A records for your bot domains:
-```
-piratesbot.rentbox.us.  IN  A  YOUR_SERVER_IP
-dragonsbot.rentbox.us.  IN  A  YOUR_SERVER_IP
-```
-
-Or use a wildcard record:
-```
-*.rentbox.us.  IN  A  YOUR_SERVER_IP
-```
-
-### 2. Traefik Setup
-Make sure Traefik is running with Let's Encrypt:
 ```bash
-# Create traefik network if it doesn't exist
+# Place your service account JSON file in the deployment directory
+cp path/to/your/service-account.json ./service-account.json
+
+# Update .env to use service account
+echo "GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json" >> .env
+```
+
+### 4. Deploy
+
+```bash
+# Create Traefik network (if using Traefik)
 docker network create traefik
 
-# Traefik should be configured with:
-# - Port 80 (web entrypoint)
-# - Port 443 (websecure entrypoint)  
-# - Let's Encrypt certificate resolver
-```
-
-## Deployment
-
-### Development
-```bash
+# Start the bot
 docker-compose up -d
+
+# Check status
+docker-compose logs -f
 ```
 
-### Production
+## Deployment Options
+
+### Option 1: Simple Docker Run (No Traefik)
+
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker run -d \
+  --name groupme-pirates-bot \
+  --restart unless-stopped \
+  -p 18080:18080 \
+  -e GROUPME_BOT_ID=your_bot_id \
+  -e GROUPME_BOT_NAME=PirateBot \
+  -e SHEET_ID=your_sheet_id \
+  -e GOOGLE_API_KEY=your_api_key \
+  -e CALENDAR_WEBCAL_URL=your_calendar_url \
+  -v $(pwd)/service-account.json:/app/service-account.json:ro \
+  rentbox81/groupme-pirates-bot:latest
 ```
 
-## Multiple Team Deployment
+### Option 2: Docker Compose with Traefik
 
-You can run multiple teams on the same server by:
+Use the provided `docker-compose.yml` which includes Traefik labels for automatic SSL and domain routing.
 
-### Option 1: Separate Directories (Recommended)
-```bash
-# Set up different team directories
-mkdir -p ~/bots/pirates
-mkdir -p ~/bots/dragons
+### Option 3: Kubernetes Deployment
 
-# Copy bot files to each directory
-cp -r /path/to/groupme-bot/* ~/bots/pirates/
-cp -r /path/to/groupme-bot/* ~/bots/dragons/
-
-# Configure each team's .env file
-cd ~/bots/pirates
-# Edit .env with TEAM_NAME=pirates, etc.
-
-cd ~/bots/dragons  
-# Edit .env with TEAM_NAME=dragons, etc.
-
-# Deploy each team
-cd ~/bots/pirates && docker-compose -f docker-compose.prod.yml up -d
-cd ~/bots/dragons && docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Option 2: Docker Compose Override Files
-```bash
-# Create team-specific override files
-# docker-compose.pirates.yml
-# docker-compose.dragons.yml
-
-docker-compose -f docker-compose.prod.yml -f docker-compose.pirates.yml up -d
-```
-
-## Traefik Labels Explained
-
-The bot automatically generates Traefik labels based on your configuration:
+<details>
+<summary>Kubernetes Deployment Example</summary>
 
 ```yaml
-# Generated from TEAM_NAME=pirates, BASE_DOMAIN=rentbox.us
-- "traefik.http.routers.piratesbot.rule=Host(`piratesbot.rentbox.us`)"
-- "traefik.http.services.piratesbot.loadbalancer.server.port=18080"
-
-# Each team gets its own router and service names to avoid conflicts
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: groupme-pirates-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: groupme-pirates-bot
+  template:
+    metadata:
+      labels:
+        app: groupme-pirates-bot
+    spec:
+      containers:
+      - name: groupme-pirates-bot
+        image: rentbox81/groupme-pirates-bot:latest
+        ports:
+        - containerPort: 18080
+        env:
+        - name: GROUPME_BOT_ID
+          valueFrom:
+            secretKeyRef:
+              name: groupme-bot-secrets
+              key: bot-id
+        - name: GROUPME_BOT_NAME
+          value: "PirateBot"
+        - name: SHEET_ID
+          valueFrom:
+            secretKeyRef:
+              name: groupme-bot-secrets  
+              key: sheet-id
+        # ... add other environment variables
+        volumeMounts:
+        - name: service-account
+          mountPath: /app/service-account.json
+          subPath: service-account.json
+          readOnly: true
+      volumes:
+      - name: service-account
+        secret:
+          secretName: service-account-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: groupme-pirates-bot
+spec:
+  selector:
+    app: groupme-pirates-bot
+  ports:
+  - port: 80
+    targetPort: 18080
 ```
 
-## Monitoring & Management
+</details>
 
-### Check Deployment Status
-```bash
-# View logs for specific team
-docker-compose logs -f groupme-bot
+## Configuration Reference
 
-# Check if container is running
-docker-compose ps
+### Required Environment Variables
 
-# View Traefik routing (if dashboard enabled)
-curl -s http://localhost:8080/api/http/routers | jq
-```
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GROUPME_BOT_ID` | Your GroupMe bot ID | `6602cda742671375feff740221` |
+| `GROUPME_BOT_NAME` | Bot name in GroupMe | `PirateBot` |
+| `SHEET_ID` | Google Sheet ID from URL | `1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms` |
+| `CALENDAR_WEBCAL_URL` | Team calendar webcal URL | `webcal://example.com/calendar.ics` |
 
-### Health Checks
-Each deployment includes automatic health checks:
-```bash
-# Test endpoint directly
-curl -I https://piratesbot.rentbox.us/
+### Optional Environment Variables
 
-# Check SSL certificate
-curl -vI https://piratesbot.rentbox.us/ 2>&1 | grep -A 5 "SSL connection"
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_API_KEY` | Google API key (read-only) | None |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Path to service account file | None |
+| `TEAM_NAME` | Team name for domain routing | `team` |
+| `BASE_DOMAIN` | Base domain for webhook URL | `localhost` |
+| `PORT` | Internal port | `18080` |
+| `RUST_LOG` | Log level | `info` |
 
-## GroupMe Webhook Configuration
+## Features
 
-After deployment, update your GroupMe bot's callback URL:
+### 🎯 Game Information
+- `@BotName next game` - Full details for next game
+- `@BotName next 3 games` - Show next 3 games  
+- `@BotName next game snacks` - Get snacks info for next game
 
-| Team | Callback URL |
-|------|-------------|
-| Pirates | `https://piratesbot.rentbox.us/` |
-| Dragons | `https://dragonsbot.rentbox.us/` |
-| Eagles | `https://eaglesbot.myteambot.com/` |
+### 🏴‍☠️ Team Spirit
+- `@BotName lets go pirates` - Get a Pirates fact!
 
-## Security Features (Production)
-
-- **SSL/TLS**: Automatic Let's Encrypt certificates
-- **Rate Limiting**: Team-specific rate limits (50 req/sec avg, 100 burst)
-- **Security Headers**: HTTPS forwarding, robot exclusion
-- **Resource Limits**: CPU and memory constraints
-- **Health Monitoring**: Automatic restart on failures
+### 👥 Volunteer Management (Requires Service Account)
+- `@BotName volunteer snacks 2025-08-23 John` - Sign up for snacks
+- `@BotName volunteer pitchcount 2025-08-23 Sarah` - Sign up for pitch counting
+- `@BotName volunteer livestream 2025-08-23 Mike` - Sign up for livestream
+- `@BotName volunteer scoreboard 2025-08-23 Lisa` - Sign up for scoreboard
+- `@BotName volunteers` - Show all volunteer needs
+- `@BotName volunteers 2025-08-23` - Show needs for specific date
 
 ## Troubleshooting
 
-### Domain Resolution Issues
-```bash
-# Test DNS resolution
-nslookup piratesbot.rentbox.us
+### Bot Not Responding
+1. Check GroupMe webhook URL is set correctly
+2. Verify bot is accessible at your domain/IP
+3. Check container logs: `docker-compose logs -f`
 
-# Test from different locations
-dig piratesbot.rentbox.us @8.8.8.8
-```
+### Volunteer Commands Not Working  
+1. Ensure service account JSON is properly mounted
+2. Verify service account has Editor access to Google Sheet
+3. Check for error codes in chat (VOL001, SVC001, etc.)
 
-### Container Issues
-```bash
-# Check container logs
-docker-compose logs groupme-bot
+### Permission Errors
+- Error `SVC001`: Service processing failed - check logs
+- Error `VOL001`: Volunteer update failed - check sheet permissions  
+- Error `CMD001`: Command parsing failed - check command format
 
-# Restart specific deployment
-docker-compose restart groupme-bot
-
-# Rebuild and redeploy
-docker-compose down && docker-compose up -d --build
-```
-
-### Traefik Issues
-```bash
-# Check Traefik logs
-docker logs traefik
-
-# Verify network connectivity
-docker network ls | grep traefik
-docker network inspect traefik
-```
-
-## Example Multi-Team Setup
+### Health Check
 
 ```bash
-# Server directory structure
-/home/user/bots/
-├── pirates/
-│   ├── .env                    # TEAM_NAME=pirates
-│   ├── docker-compose.prod.yml
-│   └── ... (bot files)
-├── dragons/
-│   ├── .env                    # TEAM_NAME=dragons  
-│   ├── docker-compose.prod.yml
-│   └── ... (bot files)
-└── eagles/
-    ├── .env                    # TEAM_NAME=eagles
-    ├── docker-compose.prod.yml
-    └── ... (bot files)
+# Test bot health
+curl http://localhost:18080/
 
-# Resulting URLs:
-# https://piratesbot.rentbox.us
-# https://dragonsbot.rentbox.us  
-# https://eaglesbot.rentbox.us
+# Should return:
+# {"service":"GroupMe Bot","status":"ok","version":"0.1.0"}
 ```
 
-This setup allows you to easily deploy and manage multiple team bots while maintaining clean separation and avoiding conflicts.
+## Security Notes
+
+- Service account JSON files contain sensitive credentials
+- Use secrets management in production environments
+- Bot runs as non-root user inside container
+- Only expose port 18080 if needed for direct access
+
+## Docker Images
+
+The bot is available as multi-architecture images supporting:
+- `linux/amd64` (Intel/AMD x64)
+- `linux/arm64` (Apple Silicon, ARM servers)
+
+### Available Tags
+- `latest` - Latest stable release
+- `main` - Latest development build  
+- `v1.0.0` - Specific version tags
+
+## Support
+
+- GitHub Issues: https://github.com/rentbox81/groupme-pirates-bot/issues
+- Documentation: https://github.com/rentbox81/groupme-pirates-bot/blob/main/README.md
+
+**🏴‍☠️ Raise the Jolly Roger! Your bot deployment is ready to sail! ⚾**

@@ -1,0 +1,44 @@
+services:
+  groupme-bot:
+    image: rentbox81/groupme-pirates-bot:latest
+    restart: unless-stopped
+    environment:
+      - GROUPME_BOT_ID=${GROUPME_BOT_ID}
+      - GROUPME_BOT_NAME=${GROUPME_BOT_NAME}
+      - SHEET_ID=${SHEET_ID}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json
+      - CALENDAR_WEBCAL_URL=${CALENDAR_WEBCAL_URL}
+      - TEAM_NAME=${TEAM_NAME}
+      - BASE_DOMAIN=${BASE_DOMAIN}
+      - CERT_RESOLVER=${CERT_RESOLVER:-letsencrypt}
+      - TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-traefik}
+      - PORT=18080
+      - RUST_LOG=info
+    volumes:
+      - "./service-account.json:/app/service-account.json:ro"
+    ports:
+      - "18080:18080"
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.${TEAM_NAME}bot.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${TEAM_NAME}bot.entrypoints=websecure"
+      - "traefik.http.routers.${TEAM_NAME}bot.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.${TEAM_NAME}bot.loadbalancer.server.port=18080"
+      - "traefik.http.routers.${TEAM_NAME}bot-http.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${TEAM_NAME}bot-http.entrypoints=web"
+      - "traefik.http.routers.${TEAM_NAME}bot-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  traefik:
+    external: true

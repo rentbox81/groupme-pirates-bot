@@ -1,333 +1,231 @@
-# GroupMe Calendar Bot
+# 🏴‍☠️ GroupMe Pirates Bot ⚾
 
-A Rust-based GroupMe bot that correlates Google Calendar events with Google Sheets data to provide event information to group members.
+A comprehensive team management bot for GroupMe that helps coordinate baseball/softball team activities, volunteer assignments, and game information.
 
-## Multi-Team Support
+## 🚀 Quick Deploy (Recommended)
 
-This bot is designed to support multiple teams using configurable domains:
-- **Domain Pattern**: `{TEAM_NAME}bot.{BASE_DOMAIN}`
-- **Examples**: 
-  - `piratesbot.rentbox.us` (Pirates team)
-  - `dragonsbot.rentbox.us` (Dragons team)
-  - `eaglesbot.myteam.com` (Eagles team)
-
-### Quick Team Setup
-
-Use the setup script to configure a new team:
-```bash
-./setup-team.sh pirates rentbox.us
-# Creates configuration for https://piratesbot.rentbox.us
-```
-
-## Features
-
-- 🤖 **GroupMe Integration**: Responds to mentions in GroupMe chat
-- 📅 **Public Calendar Support**: Fetches upcoming events from publicly accessible webcal URLs
-- 📊 **Google Sheets**: Augments calendar events with additional data (location, snacks, etc.)
-- 🔍 **Smart Commands**: Supports date queries and "next event" requests
-- ⚾ **Team Filtering**: Automatically filters events to show only Pirates team events (excludes Dragonflies)
-- 📝 **Structured Logging**: Uses tracing for comprehensive logging
-- 🐳 **Docker Support**: Easy deployment with Docker containers
-- 🛡️ **Security**: Secure credential management and input validation
-
-## Architecture
-
-The bot is built with a modular architecture:
-
-- **`config.rs`**: Environment configuration and validation
-- **`error.rs`**: Custom error types and handling
-- **`models.rs`**: Data structures for events, API responses, and commands
-- **`google_client.rs`**: Google Calendar and Sheets API clients
-- **`groupme_client.rs`**: GroupMe API client
-- **`service.rs`**: Business logic and data correlation
-- **`parser.rs`**: Command parsing and validation
-- **`main.rs`**: HTTP server and webhook handler
-
-## Setup
-
-### Prerequisites
-
-1. **Rust**: Install Rust 1.78.0 or later
-2. **GroupMe Bot**: Create a GroupMe bot and get the bot ID
-3. **Google API**: Get Google API key for Sheets API access
-4. **Google Sheet**: Create a sheet with event data (see format below)
-5. **Public Calendar**: Have a publicly accessible calendar with a webcal:// URL
-
-#### Getting Your Calendar's Webcal URL
-
-**For Google Calendar:**
-1. Open your Google Calendar
-2. Click the settings gear → Settings
-3. Select your calendar from the left sidebar
-4. Scroll to "Integrate calendar" section
-5. Copy the "Public address in iCal format" URL
-6. Replace `https://` with `webcal://` in the URL
-
-**For other calendar services:**
-Most calendar services provide public iCal/.ics URLs that can be used by replacing `https://` with `webcal://`.
-
-#### For Production Deployment with Traefik
-
-6. **Traefik**: Running Traefik instance with:
-   - External network named `traefik`
-   - Entrypoints: `web` (port 80) and `websecure` (port 443)
-   - Certificate resolver configured (e.g., Let's Encrypt)
-   - Docker provider enabled
-
-### Environment Variables
-
-Copy `.env.template` to `.env` and fill in your credentials:
+**Deploy in minutes with pre-built Docker images - no compilation required!**
 
 ```bash
+# Download deployment files
+mkdir groupme-pirates-bot && cd groupme-pirates-bot
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/.env.template
+
+# Configure your bot
 cp .env.template .env
-```
+nano .env  # Fill in your configuration
 
-Required variables:
-- `GROUPME_BOT_ID`: Your GroupMe bot ID
-- `GROUPME_BOT_NAME`: Your bot's name (for mentions)
-- `GOOGLE_API_KEY`: Your Google API key (only needed for Sheets access)
-- `SHEET_ID`: Your Google Sheet ID
-- `CALENDAR_WEBCAL_URL`: Your public calendar's webcal:// URL
-
-Domain configuration (for production deployment):
-- `TEAM_NAME`: Team name (lowercase, used for subdomain)
-- `BASE_DOMAIN`: Your registered domain
-- `CERT_RESOLVER`: Certificate resolver name (default: letsencrypt)
-- `TRAEFIK_NETWORK`: Traefik network name (default: traefik)
-
-Optional variables:
-- `PORT`: Server port (default: 18080)
-- `RUST_LOG`: Log level (default: info)
-
-### Domain Configuration Examples
-
-| Team Name | BASE_DOMAIN | Result URL |
-|-----------|-------------|------------|
-| pirates | rentbox.us | `https://piratesbot.rentbox.us` |
-| dragons | myteam.com | `https://dragonsbot.myteam.com` |
-| eagles | sportsbot.net | `https://eaglesbot.sportsbot.net` |
-
-### Google Sheet Format
-
-Your Google Sheet should have columns in this order (starting from row 2):
-
-| A: Date | B: Title | C: Location | D: Snacks | E: Livestream | F: Scoreboard | G: Pitch Count |
-|---------|----------|-------------|-----------|---------------|---------------|----------------|
-| 2023-12-25 | Game vs Team | Stadium | John | Sarah | Mike | Lisa |
-
-### Installation
-
-#### Local Development
-
-1. Clone the repository
-2. Set up environment variables
-3. Run the bot:
-
-```bash
-cargo run
-```
-
-#### Docker
-
-1. Build the Docker image:
-
-```bash
-docker build -t groupme-bot .
-```
-
-2. Run with environment file:
-
-```bash
-docker run --env-file .env -p 18080:18080 groupme-bot
-```
-
-#### Docker Compose
-
-**For local development:**
-
-```bash
+# Deploy
 docker-compose up -d
 ```
 
-**For production with Traefik:**
+**📖 Full deployment guide: [DEPLOYMENT.md](DEPLOYMENT.md)**
 
-The project includes Traefik configuration for automatic HTTPS and reverse proxy setup:
+## ✨ Features
 
+### 🎯 Game Information
+- **Next Game Details**: Get complete game information including time, location, and opponent
+- **Game Schedule**: View upcoming games with snack assignments
+- **Team Calendar Integration**: Automatic sync with team calendar systems
+
+### 👥 Volunteer Management  
+- **Snack Assignments**: Sign up and manage snack volunteers
+- **Game Roles**: Coordinate pitch counting, scoreboard, and livestream volunteers
+- **Automatic Updates**: Real-time Google Sheets integration for volunteer tracking
+
+### 🏴‍☠️ Team Spirit
+- **Pirates Facts**: Random fun facts about the Pittsburgh Pirates
+- **Team Motivation**: Customizable team-specific responses and encouragement
+
+### 🔧 Advanced Features
+- **Multi-Architecture Support**: Runs on x64 and ARM64 (Apple Silicon, Raspberry Pi)
+- **Secure Authentication**: Google Service Account integration for write operations
+- **Error Resilience**: Graceful error handling with user-friendly error codes
+- **Traefik Integration**: Automatic SSL and reverse proxy configuration
+
+## 📋 Commands
+
+### Basic Commands
+```
+@PirateBot commands              # Show all available commands
+@PirateBot next game             # Full details for next game
+@PirateBot next 3 games          # Show next 3 games
+@PirateBot next game snacks      # Get snacks info for next game
+@PirateBot lets go pirates       # Get a Pirates fact!
+```
+
+### Volunteer Management
+```
+@PirateBot volunteer snacks 2025-08-23 John        # Sign up for snacks
+@PirateBot volunteer pitchcount 2025-08-23 Sarah   # Sign up for pitch counting  
+@PirateBot volunteer livestream 2025-08-23 Mike    # Sign up for livestream
+@PirateBot volunteer scoreboard 2025-08-23 Lisa    # Sign up for scoreboard
+@PirateBot volunteers                               # Show all volunteer needs
+@PirateBot volunteers 2025-08-23                   # Show needs for specific date
+```
+
+## 🛠 Development Setup
+
+<details>
+<summary>Local Development (Click to expand)</summary>
+
+### Prerequisites
+- Rust 1.82+ 
+- Docker and Docker Compose
+- GroupMe Bot Token
+- Google API access
+
+### Setup
 ```bash
-# Edit your .env file to set DOMAIN and CERT_RESOLVER
-echo "DOMAIN=your-bot.yourdomain.com" >> .env
-echo "CERT_RESOLVER=letsencrypt" >> .env
+git clone https://github.com/rentbox81/groupme-pirates-bot.git
+cd groupme-pirates-bot
 
-# Deploy with production configuration
-docker-compose -f docker-compose.prod.yml up -d
+# Copy environment template
+cp .env.template .env
+# Edit .env with your configuration
+
+# Run locally
+cargo run
+
+# Or with Docker
+docker-compose up --build
 ```
 
-The production configuration includes:
-- Automatic HTTPS with Let's Encrypt
-- HTTP to HTTPS redirects
-- Security headers
-- Rate limiting
-- Resource constraints
-
-### GroupMe Webhook Setup
-
-1. Set your GroupMe bot's callback URL to: `https://your-domain.com/webhook`
-2. The bot will respond to webhook events at this endpoint
-
-## Usage
-
-Once deployed, group members can interact with the bot using these commands:
-
-### Commands
-
-- `@BotName` or `@BotName help` - Show help message
-- `@BotName next` - Get information about the next upcoming event
-- `@BotName next [field]` - Get specific field for the next event
-- `@BotName YYYY-MM-DD` - Get information for a specific date
-- `@BotName YYYY-MM-DD [field]` - Get specific field for a specific date
-
-### Available Fields
-
-- `location` - Event location
-- `snacks` - Who's bringing snacks
-- `livestream` - Parent assigned to livestream
-- `scoreboard` - Parent assigned to scoreboard
-- `pitchcount` - Parent assigned to pitch count
-
-### Examples
-
-```
-@Pirate Bot next
-→ Event: Game vs Cardinals
-→ Date: 2023-12-25
-→ Location: Busch Stadium
-→ Snacks: John
-→ Livestream: Sarah
-→ Scoreboard: Mike
-→ Pitch Count: Lisa
-
-@Pirate Bot next location
-→ location: Busch Stadium
-
-@Pirate Bot 2023-12-25 livestream
-→ livestream: Sarah
-```
-
-## API Endpoints
-
-- `GET /` - Health check endpoint
-- `POST /webhook` - GroupMe webhook endpoint
-
-## Security Considerations
-
-⚠️ **Important**: Never commit sensitive credentials to version control!
-
-- Use environment variables for all secrets
-- Regenerate any exposed API keys
-- The `.gitignore` file excludes common secret files
-- Use `.env.template` as a reference for required variables
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Bot not responding**: Check that the webhook URL is correctly configured in GroupMe
-2. **Google API errors**: Verify API key and ensure Calendar/Sheets APIs are enabled
-3. **Date parsing errors**: Ensure dates in Google Sheet follow YYYY-MM-DD format
-4. **Sheet correlation issues**: Check that event titles match between Calendar and Sheet
-
-### Logging
-
-Set `RUST_LOG=debug` to see detailed logs:
-
+### Development Commands
 ```bash
+# Run tests
+cargo test
+
+# Check code
+cargo check
+
+# Format code  
+cargo fmt
+
+# Run with debug logging
 RUST_LOG=debug cargo run
-```
 
-### Health Check
+# Test Google APIs
+cargo run --bin test-google-apis
 
-Check if the bot is running:
-
-```bash
-curl http://localhost:18080/
-```
-
-## Testing
-
-### CLI Testing
-
-Before deploying to GroupMe, you can test the bot locally using the CLI testing tools:
-
-**Mock Mode (No API credentials needed):**
-```bash
+# Test bot commands (mock mode)
 cargo run --bin test-bot-mock
 ```
 
-This uses mock data and doesn't require real Google API credentials. Perfect for testing command parsing and response formatting.
+</details>
 
-**Live Mode (Requires full .env configuration):**
+## 🔒 Security & Authentication
+
+### Google Sheets Integration
+- **API Key**: Read-only access to public sheets
+- **Service Account**: Full read/write access (recommended for volunteer features)
+- **Secure Credentials**: JSON credentials mounted as read-only volumes
+
+### Container Security
+- Non-root user execution
+- Minimal base image with security updates
+- Environment-based configuration (no hardcoded secrets)
+- Health check monitoring
+
+## 🏗 Architecture
+
+```
+GroupMe ← Webhook → Bot ← APIs → Google Sheets
+                    ↓           ↗ Google Calendar  
+                 Docker      ↗
+                 Container ↗
+```
+
+### Components
+- **Actix Web**: High-performance async web framework
+- **Reqwest**: HTTP client for API integrations
+- **Tokio**: Async runtime for handling concurrent requests
+- **Docker**: Containerized deployment with multi-stage builds
+
+## 📊 Monitoring & Observability
+
+- **Health Checks**: Built-in health endpoint (`/health`)  
+- **Structured Logging**: JSON-formatted logs with request tracing
+- **Error Codes**: User-friendly error codes (SVC001, VOL001, etc.)
+- **Metrics**: Request timing and success/failure tracking
+
+## 🚢 Deployment Options
+
+### 1. Docker Hub (Recommended)
 ```bash
-cargo run --bin test-bot
+docker run -d --name pirates-bot \
+  -e GROUPME_BOT_ID=your_bot_id \
+  -p 18080:18080 \
+  rentbox81/groupme-pirates-bot:latest
 ```
 
-This connects to your actual Google Calendar and Sheets APIs to test the full functionality.
-
-### Example CLI Test Session
-
-```
-🤖 GroupMe Bot CLI Tester (Mock Mode)
-Bot Name: TestBot
-This mode uses mock data and doesn't require real API credentials.
-Enter messages as if you're typing in GroupMe chat.
-Type 'quit' or 'exit' to stop testing.
-
-💡 Example commands to try:
-  @TestBot help
-  @TestBot next
-  @TestBot next location
-  @TestBot 2024-01-15
-  @TestBot 2024-01-15 snacks
-
-Enter message: @TestBot help
-📝 Parsed command: Help
-🤖 Bot Response:
-─────────────────
-Hello! I can tell you about upcoming events. Try these commands:\n• @TestBot next - Get info about the next event\n...
-─────────────────
-
-Enter message: quit
-Goodbye! 👋
-```
-
-## Development
-
-### Running Tests
-
+### 2. Docker Compose
 ```bash
-cargo test
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
+docker-compose up -d
 ```
 
-### Code Formatting
+### 3. Kubernetes
+See [DEPLOYMENT.md](DEPLOYMENT.md#option-3-kubernetes-deployment) for Kubernetes manifests.
 
-```bash
-cargo fmt
-```
+## 🔧 Configuration
 
-### Linting
+### Required Environment Variables
+| Variable | Description |
+|----------|-------------|
+| `GROUPME_BOT_ID` | Your GroupMe bot ID |
+| `GROUPME_BOT_NAME` | Bot name for @mentions |
+| `SHEET_ID` | Google Sheet ID from URL |
+| `CALENDAR_WEBCAL_URL` | Team calendar webcal URL |
 
-```bash
-cargo clippy
-```
+### Optional Environment Variables  
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_API_KEY` | Google API key | None |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account file path | None |
+| `TEAM_NAME` | Team name for routing | `team` |
+| `BASE_DOMAIN` | Domain for webhooks | `localhost` |
+| `PORT` | HTTP port | `18080` |
 
-## Contributing
+## 🐳 Docker Images
+
+Multi-architecture images available on Docker Hub:
+
+- `rentbox81/groupme-pirates-bot:latest` - Latest stable release
+- `rentbox81/groupme-pirates-bot:main` - Development builds
+- `rentbox81/groupme-pirates-bot:v1.0.0` - Tagged releases
+
+**Supported Platforms:**
+- `linux/amd64` (Intel/AMD x64)
+- `linux/arm64` (Apple Silicon, ARM servers)
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run tests and linting
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+### Development Guidelines
+- Follow Rust best practices and idioms
+- Add tests for new functionality
+- Update documentation for user-facing changes
+- Ensure Docker builds succeed for all platforms
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🏴‍☠️ Support
+
+- **Issues**: [GitHub Issues](https://github.com/rentbox81/groupme-pirates-bot/issues)
+- **Documentation**: [Full Documentation](https://github.com/rentbox81/groupme-pirates-bot/blob/main/DEPLOYMENT.md)
+- **Docker Hub**: [Image Repository](https://hub.docker.com/r/rentbox81/groupme-pirates-bot)
+
+---
+
+**🏴‍☠️ Raise the Jolly Roger! Your team management just got a first mate! ⚾**
+
+*Built with ⚡ Rust and ❤️ for youth baseball teams*
