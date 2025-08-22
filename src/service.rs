@@ -177,7 +177,8 @@ impl BotService {
                 // @bot next game
                 match self.find_next_event().await? {
                     Some(event) => {
-                        let mut response = format!("🏴‍☠️ Next Game: {}\\n", event.event_summary);
+                        let mut response = format!("🏴‍☠️ Next Game: {}
+", event.event_summary);
                         response.push_str(&event.data.format_all());
                         Ok(response)
                     }
@@ -200,13 +201,20 @@ impl BotService {
                     return Ok("⚾ No upcoming games found.".to_string());
                 }
                 
-                let mut response = format!("🏴‍☠️ Next {} Games:\\n\\n", count.min(upcoming_events.len()));
+                let mut response = format!("🏴‍☠️ Next {} Games:
+
+", count.min(upcoming_events.len()));
                 
                 for (date, event) in upcoming_events.iter().take(count) {
-                    response.push_str(&format!("📅 {} - {}\\n", date.format("%Y-%m-%d"), event.event_summary));
-                    response.push_str(&format!("⏰ Time: {}\\n", event.data.time));
-                    response.push_str(&format!("📍 Location: {}\\n", event.data.format_location_with_link()));
-                    response.push_str(&format!("🏠 Home Team: {}\\n\\n", event.data.home_team));
+                    response.push_str(&format!("📅 {} - {}
+", date.format("%Y-%m-%d"), event.event_summary));
+                    response.push_str(&format!("⏰ Time: {}
+", event.data.time));
+                    response.push_str(&format!("📍 Location: {}
+", event.data.format_location_with_link()));
+                    response.push_str(&format!("🏠 Home Team: {}
+
+", event.data.home_team));
                 }
                 
                 Ok(response)
@@ -248,18 +256,34 @@ impl BotService {
             
             BotCommand::Commands => {
                 Ok(format!(
-                    "⚾ {} Commands:\\n\\n\
-                     🏴‍☠️ Game Info:\\n\
-                     • @{} next game - Full details for next game\\n\
-                     • @{} next 3 games - Show next 3 games\\n\
-                     • @{} next game snacks - Get snacks info for next game\\n\\n\
-                     🏴‍☠️ Team Spirit:\\n\
-                     • @{} lets go pirates - Get a Pirates fact!\\n\\n\
-                     🏴‍☠️ Volunteers:\\n\
-                     • @{} volunteer snacks 2025-01-15 John - Sign up to volunteer\\n\
-                     • @{} volunteers - Show all volunteer needs\\n\
-                     • @{} volunteers 2025-01-15 - Show needs for specific date\\n\\n\
-                     📋 Categories: time, location, home, snacks, livestream, scoreboard, pitchcount\\n\
+                    "⚾ {} Commands:
+
+\
+                     🏴‍☠️ Game Info:
+\
+                     • @{} next game - Full details for next game
+\
+                     • @{} next 3 games - Show next 3 games
+\
+                     • @{} next game snacks - Get snacks info for next game
+
+\
+                     🏴‍☠️ Team Spirit:
+\
+                     • @{} lets go pirates - Get a Pirates fact!
+
+\
+                     🏴‍☠️ Volunteers:
+\
+                     • @{} volunteer snacks 2025-01-15 John - Sign up to volunteer
+\
+                     • @{} volunteers - Show all volunteer needs
+\
+                     • @{} volunteers 2025-01-15 - Show needs for specific date
+
+\
+                     📋 Categories: time, location, home, snacks, livestream, scoreboard, pitchcount
+\
                      🏴‍☠️ Raise the Jolly Roger! ⚾",
                     self.config.groupme_bot_name,
                     self.config.groupme_bot_name,

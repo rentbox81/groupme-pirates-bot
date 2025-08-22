@@ -1,5 +1,5 @@
 # Use a slim Rust base image for a smaller final image
-FROM rust:1.78.0-slim as build
+FROM rust:1.82-slim AS build
 
 # Install necessary dependencies for building
 RUN apt-get update && apt-get install -y \
@@ -16,21 +16,22 @@ COPY Cargo.toml ./
 
 # Create a dummy src/main.rs to cache dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
+RUN cargo build --release --bin groupme-bot
 RUN rm -rf src
 
 # Copy the actual source code
 COPY src ./src
 
-# Build the release binary
-RUN cargo build --release
+# Build the release binary (only the main binary)
+RUN cargo build --release --bin groupme-bot
 
 # Use a minimal base image for the final container
 FROM debian:bookworm-slim
 
-# Install SSL certificates and CA certificates
+# Install SSL certificates, CA certificates, and curl for health checks
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
