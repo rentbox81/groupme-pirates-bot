@@ -22,6 +22,27 @@ docker-compose up -d
 
 **📖 Full deployment guide: [DEPLOYMENT.md](DEPLOYMENT.md)**
 
+## 🐳 Docker Images
+
+**Multi-architecture images available on Docker Hub:**
+
+[![Docker Hub](https://img.shields.io/docker/v/rentwork/groupme-pirates-bot?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
+[![Image Size](https://img.shields.io/docker/image-size/rentwork/groupme-pirates-bot/latest?label=Image%20Size&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
+[![Docker Pulls](https://img.shields.io/docker/pulls/rentwork/groupme-pirates-bot?label=Downloads&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
+
+- `rentwork/groupme-pirates-bot:latest` - Latest stable release
+- `rentwork/groupme-pirates-bot:v1.0.0` - Tagged releases
+- `rentwork/groupme-pirates-bot:main` - Development builds (when CI/CD is enabled)
+
+**Supported Platforms:**
+- `linux/amd64` (Intel/AMD x64) ✅
+- `linux/arm64` (Apple Silicon, ARM servers) - Coming soon with CI/CD
+
+**Image Stats:**
+- **Size**: ~116MB (optimized multi-stage build)
+- **Base**: Debian Bookworm Slim (security updates)
+- **Security**: Non-root user, minimal attack surface
+
 ## ✨ Features
 
 ### 🎯 Game Information
@@ -64,6 +85,62 @@ docker-compose up -d
 @PirateBot volunteers                               # Show all volunteer needs
 @PirateBot volunteers 2025-08-23                   # Show needs for specific date
 ```
+
+## 🚢 Deployment Options
+
+### 1. Docker Run (Quick Start)
+```bash
+docker run -d --name pirates-bot \
+  -e GROUPME_BOT_ID=your_bot_id \
+  -e GROUPME_BOT_NAME=PirateBot \
+  -e SHEET_ID=your_sheet_id \
+  -e CALENDAR_WEBCAL_URL=your_calendar_url \
+  -p 18080:18080 \
+  rentwork/groupme-pirates-bot:latest
+```
+
+### 2. Docker Compose (Recommended)
+```bash
+# Download deployment files
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/.env.template
+
+# Configure
+cp .env.template .env
+nano .env
+
+# Deploy with Traefik (production)
+docker-compose up -d
+
+# Or simple deployment (development)
+docker run -d --name pirates-bot \
+  --env-file .env \
+  -p 18080:18080 \
+  rentwork/groupme-pirates-bot:latest
+```
+
+### 3. Kubernetes
+See [DEPLOYMENT.md](DEPLOYMENT.md#option-3-kubernetes-deployment) for Kubernetes manifests.
+
+## 🔧 Configuration
+
+### Required Environment Variables
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GROUPME_BOT_ID` | Your GroupMe bot ID | `abc123def456` |
+| `GROUPME_BOT_NAME` | Bot name for @mentions | `PirateBot` |
+| `SHEET_ID` | Google Sheet ID from URL | `1abc...xyz` |
+| `CALENDAR_WEBCAL_URL` | Team calendar webcal URL | `webcal://calendar.example.com/feed` |
+
+### Optional Environment Variables  
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_API_KEY` | Google API key | None |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account file path | None |
+| `TEAM_NAME` | Team name for routing | `team` |
+| `BASE_DOMAIN` | Domain for webhooks | `localhost` |
+| `PORT` | HTTP port | `18080` |
+| `RUST_LOG` | Log level | `info` |
 
 ## 🛠 Development Setup
 
@@ -111,6 +188,9 @@ cargo run --bin test-google-apis
 
 # Test bot commands (mock mode)
 cargo run --bin test-bot-mock
+
+# Build Docker image locally
+docker build -t groupme-pirates-bot:local .
 ```
 
 </details>
@@ -150,56 +230,6 @@ GroupMe ← Webhook → Bot ← APIs → Google Sheets
 - **Error Codes**: User-friendly error codes (SVC001, VOL001, etc.)
 - **Metrics**: Request timing and success/failure tracking
 
-## 🚢 Deployment Options
-
-### 1. Docker Hub (Recommended)
-```bash
-docker run -d --name pirates-bot \
-  -e GROUPME_BOT_ID=your_bot_id \
-  -p 18080:18080 \
-  rentbox81/groupme-pirates-bot:latest
-```
-
-### 2. Docker Compose
-```bash
-curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
-docker-compose up -d
-```
-
-### 3. Kubernetes
-See [DEPLOYMENT.md](DEPLOYMENT.md#option-3-kubernetes-deployment) for Kubernetes manifests.
-
-## 🔧 Configuration
-
-### Required Environment Variables
-| Variable | Description |
-|----------|-------------|
-| `GROUPME_BOT_ID` | Your GroupMe bot ID |
-| `GROUPME_BOT_NAME` | Bot name for @mentions |
-| `SHEET_ID` | Google Sheet ID from URL |
-| `CALENDAR_WEBCAL_URL` | Team calendar webcal URL |
-
-### Optional Environment Variables  
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GOOGLE_API_KEY` | Google API key | None |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account file path | None |
-| `TEAM_NAME` | Team name for routing | `team` |
-| `BASE_DOMAIN` | Domain for webhooks | `localhost` |
-| `PORT` | HTTP port | `18080` |
-
-## 🐳 Docker Images
-
-Multi-architecture images available on Docker Hub:
-
-- `rentbox81/groupme-pirates-bot:latest` - Latest stable release
-- `rentbox81/groupme-pirates-bot:main` - Development builds
-- `rentbox81/groupme-pirates-bot:v1.0.0` - Tagged releases
-
-**Supported Platforms:**
-- `linux/amd64` (Intel/AMD x64)
-- `linux/arm64` (Apple Silicon, ARM servers)
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -214,6 +244,17 @@ Multi-architecture images available on Docker Hub:
 - Update documentation for user-facing changes
 - Ensure Docker builds succeed for all platforms
 
+## 🔄 CI/CD Pipeline
+
+The project includes GitHub Actions workflows for automated building and deployment:
+
+- **Automated Docker Builds**: Multi-platform images (amd64, arm64)
+- **Docker Hub Publishing**: Automatic tagging and publishing
+- **Deployment Artifacts**: Generated docker-compose and configuration files
+- **Security Scanning**: Container vulnerability assessments
+
+> **Note**: CI/CD requires GitHub token with `workflow` scope. Currently using manual builds.
+
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -222,7 +263,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/rentbox81/groupme-pirates-bot/issues)
 - **Documentation**: [Full Documentation](https://github.com/rentbox81/groupme-pirates-bot/blob/main/DEPLOYMENT.md)
-- **Docker Hub**: [Image Repository](https://hub.docker.com/r/rentbox81/groupme-pirates-bot)
+- **Docker Hub**: [Image Repository](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
 
 ---
 
