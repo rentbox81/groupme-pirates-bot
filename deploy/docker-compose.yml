@@ -1,6 +1,6 @@
 services:
   groupme-bot:
-    image: rentbox81/groupme-pirates-bot:latest
+    image: rentwork/groupme-pirates-bot:latest
     restart: unless-stopped
     environment:
       - GROUPME_BOT_ID=${GROUPME_BOT_ID}
