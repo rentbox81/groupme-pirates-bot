@@ -82,7 +82,7 @@ impl BotService {
                 
                 // Update the event summary to be more descriptive using sheet data
                 if !time.is_empty() && !home_team.is_empty() {
-                    event.event_summary = format!("{} - {}", time, home_team);
+                    event.event_summary = format!("{} vs. {}", time, home_team);
                 }
                 
                 info!("Updated event {} with sheet data", date);
@@ -101,7 +101,7 @@ impl BotService {
                 );
                 
                 let summary = if !time.is_empty() && !home_team.is_empty() {
-                    format!("{} - {}", time, home_team)
+                    format!("{} vs. {}", time, home_team)
                 } else {
                     format!("Event on {}", date)
                 };
