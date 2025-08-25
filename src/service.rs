@@ -66,7 +66,7 @@ impl BotService {
         }
         
         // Augment with data from Google Sheets
-        for (date, time, location, snacks, livestream, scoreboard, pitch_count, home_team) in sheets_data {
+        for (date, time, location, home_team, snacks, livestream, scoreboard, pitch_count) in sheets_data {
             if let Some(event) = correlated_map.get_mut(&date) {
                 // Always update with sheet data (sheet is more detailed than calendar)
                 event.data = EventData::new(
@@ -82,7 +82,7 @@ impl BotService {
                 
                 // Update the event summary to be more descriptive using sheet data
                 if !time.is_empty() && !home_team.is_empty() {
-                    event.event_summary = format!("{} vs. {}", time, home_team);
+                    event.event_summary = format!("{} - {}", time, home_team);
                 }
                 
                 info!("Updated event {} with sheet data", date);
@@ -101,7 +101,7 @@ impl BotService {
                 );
                 
                 let summary = if !time.is_empty() && !home_team.is_empty() {
-                    format!("{} vs. {}", time, home_team)
+                    format!("{} - {}", time, home_team)
                 } else {
                     format!("Event on {}", date)
                 };

@@ -55,3 +55,7 @@ rand = "0.8"
 # Google Service Account authentication
 jsonwebtoken = "9.3"
 base64 = "0.22"
+
+[[bin]]
+name = "test-sheets-detailed"
+path = "src/bin/test_sheets_detailed.rs"
