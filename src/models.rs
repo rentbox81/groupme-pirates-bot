@@ -187,8 +187,16 @@ impl CorrelatedEvent {
                 format!("{} vs {}", team1, team2)
             }
         } else {
-            // Fallback to just showing home team
-            format!("Home: {}", self.data.home_team)
+            // Fallback: construct a friendly description from available data
+            if !self.data.home_team.is_empty() && self.data.home_team.to_lowercase() != "home" {
+                format!("{} Game", self.data.home_team)
+            } else if !self.data.time.is_empty() && !self.data.location.is_empty() {
+                format!("{} at {}", self.data.time, self.data.location)
+            } else if !self.event_summary.is_empty() {
+                self.event_summary.clone()
+            } else {
+                "Game".to_string()
+            }
         }
     }
     
