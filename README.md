@@ -1,272 +1,159 @@
-# 🏴‍☠️ GroupMe Pirates Bot ⚾
+# GroupMe Pirates Bot 🏴‍☠️
 
-A comprehensive team management bot for GroupMe that helps coordinate baseball/softball team activities, volunteer assignments, and game information.
+A Rust-based GroupMe bot that integrates with Google Sheets and Google Calendar to provide team scheduling and management for the Pirates team. **Now with conversational AI!**
 
-## 🚀 Quick Deploy (Recommended)
+## Features
 
-**Deploy in minutes with pre-built Docker images - no compilation required!**
+- 🤖 **Conversational Interface**: Talk naturally to the bot - no strict commands needed!
+- 📊 **Google Sheets API**: Fetches team data and schedules  
+- 📅 **Calendar Integration**: Shows upcoming games and events
+- 🌐 **Web Interface**: Webhook endpoint for GroupMe notifications
+- 🔒 **Secure**: Built-in authentication and rate limiting
+- 🐳 **Containerized**: Easy deployment with Docker
+
+## Conversational Interface
+
+The bot now understands natural language! You don't need to remember exact commands.
+
+### Natural Volunteer Sign-ups
+- `@PirateBot I've got snacks` - Sign up for snacks
+- `@PirateBot I can do livestream for Saturday` - Volunteer for a specific date
+- `@PirateBot put me down for scoreboard` - Sign up for scoreboard
+- `@PirateBot I'll bring snacks next game for John` - Sign someone else up
+
+### Natural Game Queries
+- `@PirateBot when's the next game?` - Get next game info
+- `@PirateBot where are we playing?` - Location info
+- `@PirateBot what time is the game?` - Game time
+- `@PirateBot show me the next 3 games` - Multiple games
+
+### Volunteer Status
+- `@PirateBot who's bringing snacks?` - Check volunteer status
+- `@PirateBot do we need anything?` - See what roles are open
+- `@PirateBot volunteers for Saturday` - Check specific date
+
+### Team Spirit
+- `@PirateBot let's go pirates!` - Get a Pirates fact
+- `@PirateBot go pirates!` - Team motivation
+
+### Need Help?
+- `@PirateBot help` - See what the bot can do
+- Just mention `@PirateBot` - The bot will guide you
+
+## Traditional Commands (Still Supported)
+
+For those who prefer exact commands:
+
+- `@PirateBot next game` - Show upcoming game details
+- `@PirateBot next 3 games` - Show next 3 games
+- `@PirateBot next game snacks` - Get specific category info
+- `@PirateBot volunteer snacks 2025-01-15 John` - Sign up to volunteer
+- `@PirateBot volunteers` - Show all volunteer needs
+- `@PirateBot volunteers 2025-01-15` - Show needs for specific date
+
+## Quick Deployment
 
 ```bash
-# Download deployment files
-mkdir groupme-pirates-bot && cd groupme-pirates-bot
-curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/.env.template
-
-# Configure your bot
-cp .env.template .env
-nano .env  # Fill in your configuration
-
-# Deploy
-docker-compose up -d
-```
-
-**📖 Full deployment guide: [DEPLOYMENT.md](DEPLOYMENT.md)**
-
-## 🐳 Docker Images
-
-**Multi-architecture images available on Docker Hub:**
-
-[![Docker Hub](https://img.shields.io/docker/v/rentwork/groupme-pirates-bot?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
-[![Image Size](https://img.shields.io/docker/image-size/rentwork/groupme-pirates-bot/latest?label=Image%20Size&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
-[![Docker Pulls](https://img.shields.io/docker/pulls/rentwork/groupme-pirates-bot?label=Downloads&logo=docker)](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
-
-- `rentwork/groupme-pirates-bot:latest` - Latest stable release
-- `rentwork/groupme-pirates-bot:v1.0.0` - Tagged releases
-- `rentwork/groupme-pirates-bot:main` - Development builds (when CI/CD is enabled)
-
-**Supported Platforms:**
-- `linux/amd64` (Intel/AMD x64) ✅
-- `linux/arm64` (Apple Silicon, ARM servers) - Coming soon with CI/CD
-
-**Image Stats:**
-- **Size**: ~116MB (optimized multi-stage build)
-- **Base**: Debian Bookworm Slim (security updates)
-- **Security**: Non-root user, minimal attack surface
-
-## ✨ Features
-
-### 🎯 Game Information
-- **Next Game Details**: Get complete game information including time, location, and opponent
-- **Game Schedule**: View upcoming games with snack assignments
-- **Team Calendar Integration**: Automatic sync with team calendar systems
-
-### 👥 Volunteer Management  
-- **Snack Assignments**: Sign up and manage snack volunteers
-- **Game Roles**: Coordinate pitch counting, scoreboard, and livestream volunteers
-- **Automatic Updates**: Real-time Google Sheets integration for volunteer tracking
-
-### 🏴‍☠️ Team Spirit
-- **Pirates Facts**: Random fun facts about the Pittsburgh Pirates
-- **Team Motivation**: Customizable team-specific responses and encouragement
-
-### 🔧 Advanced Features
-- **Multi-Architecture Support**: Runs on x64 and ARM64 (Apple Silicon, Raspberry Pi)
-- **Secure Authentication**: Google Service Account integration for write operations
-- **Error Resilience**: Graceful error handling with user-friendly error codes
-- **Traefik Integration**: Automatic SSL and reverse proxy configuration
-
-## 📋 Commands
-
-### Basic Commands
-```
-@PirateBot commands              # Show all available commands
-@PirateBot next game             # Full details for next game
-@PirateBot next 3 games          # Show next 3 games
-@PirateBot next game snacks      # Get snacks info for next game
-@PirateBot lets go pirates       # Get a Pirates fact!
-```
-
-### Volunteer Management
-```
-@PirateBot volunteer snacks 2025-08-23 John        # Sign up for snacks
-@PirateBot volunteer pitchcount 2025-08-23 Sarah   # Sign up for pitch counting  
-@PirateBot volunteer livestream 2025-08-23 Mike    # Sign up for livestream
-@PirateBot volunteer scoreboard 2025-08-23 Lisa    # Sign up for scoreboard
-@PirateBot volunteers                               # Show all volunteer needs
-@PirateBot volunteers 2025-08-23                   # Show needs for specific date
-```
-
-## 🚢 Deployment Options
-
-### 1. Docker Run (Quick Start)
-```bash
-docker run -d --name pirates-bot \
-  -e GROUPME_BOT_ID=your_bot_id \
-  -e GROUPME_BOT_NAME=PirateBot \
-  -e SHEET_ID=your_sheet_id \
-  -e CALENDAR_WEBCAL_URL=your_calendar_url \
-  -p 18080:18080 \
-  rentwork/groupme-pirates-bot:latest
-```
-
-### 2. Docker Compose (Recommended)
-```bash
-# Download deployment files
-curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/docker-compose.yml
-curl -O https://raw.githubusercontent.com/rentbox81/groupme-pirates-bot/main/deploy/.env.template
-
-# Configure
-cp .env.template .env
-nano .env
-
-# Deploy with Traefik (production)
-docker-compose up -d
-
-# Or simple deployment (development)
-docker run -d --name pirates-bot \
-  --env-file .env \
-  -p 18080:18080 \
-  rentwork/groupme-pirates-bot:latest
-```
-
-### 3. Kubernetes
-See [DEPLOYMENT.md](DEPLOYMENT.md#option-3-kubernetes-deployment) for Kubernetes manifests.
-
-## 🔧 Configuration
-
-### Required Environment Variables
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GROUPME_BOT_ID` | Your GroupMe bot ID | `abc123def456` |
-| `GROUPME_BOT_NAME` | Bot name for @mentions | `PirateBot` |
-| `SHEET_ID` | Google Sheet ID from URL | `1abc...xyz` |
-| `CALENDAR_WEBCAL_URL` | Team calendar webcal URL | `webcal://calendar.example.com/feed` |
-
-### Optional Environment Variables  
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GOOGLE_API_KEY` | Google API key | None |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service account file path | None |
-| `TEAM_NAME` | Team name for routing | `team` |
-| `BASE_DOMAIN` | Domain for webhooks | `localhost` |
-| `PORT` | HTTP port | `18080` |
-| `RUST_LOG` | Log level | `info` |
-
-## 🛠 Development Setup
-
-<details>
-<summary>Local Development (Click to expand)</summary>
-
-### Prerequisites
-- Rust 1.82+ 
-- Docker and Docker Compose
-- GroupMe Bot Token
-- Google API access
-
-### Setup
-```bash
-git clone https://github.com/rentbox81/groupme-pirates-bot.git
+# 1. Clone the repository
+git clone <your-repo-url>
 cd groupme-pirates-bot
 
-# Copy environment template
+# 2. Set up environment
 cp .env.template .env
 # Edit .env with your configuration
 
-# Run locally
-cargo run
+# 3. Add Google service account
+# Place your service-account.json file in the project root
 
-# Or with Docker
-docker-compose up --build
+# 4. Deploy
+docker compose up -d --build
 ```
 
-### Development Commands
+## Access Points
+
+- **Webhook**: `https://piratebot.rentbox.us/webhook`
+- **Health Check**: `http://localhost:18080/`
+- **Logs**: `docker compose logs -f`
+
+## Configuration
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup instructions.
+
+### Required Files
+- `.env` - Environment configuration
+- `service-account.json` - Google Cloud service account key
+
+### Environment Variables
+- `GROUPME_BOT_ID` - Your GroupMe bot ID
+- `GROUPME_BOT_NAME` - Bot name (e.g., PirateBot)
+- `SHEET_ID` - Google Sheets ID for team data
+- `CALENDAR_WEBCAL_URL` - Team calendar URL
+- `BASE_DOMAIN` - Your domain for external access
+
+## Development
+
 ```bash
+# Local development
+docker compose -f deployment-variants/docker-compose.local.yml up -d
+
+# View logs
+docker compose logs -f
+
+# Rebuild after changes
+docker compose up -d --build
+
 # Run tests
 cargo test
-
-# Check code
-cargo check
-
-# Format code  
-cargo fmt
-
-# Run with debug logging
-RUST_LOG=debug cargo run
-
-# Test Google APIs
-cargo run --bin test-google-apis
-
-# Test bot commands (mock mode)
-cargo run --bin test-bot-mock
-
-# Build Docker image locally
-docker build -t groupme-pirates-bot:local .
 ```
 
-</details>
+## Architecture
 
-## 🔒 Security & Authentication
+- **Runtime**: Rust with Actix-web framework
+- **AI**: Natural language understanding with intent detection
+- **APIs**: GroupMe Webhook + Google Sheets + Calendar
+- **Deployment**: Docker with Traefik reverse proxy
+- **Security**: Rate limiting, HTTPS, security headers
 
-### Google Sheets Integration
-- **API Key**: Read-only access to public sheets
-- **Service Account**: Full read/write access (recommended for volunteer features)
-- **Secure Credentials**: JSON credentials mounted as read-only volumes
+## What's New
 
-### Container Security
-- Non-root user execution
-- Minimal base image with security updates
-- Environment-based configuration (no hardcoded secrets)
-- Health check monitoring
+### v0.2.0 - Conversational AI
+- 🎯 Natural language understanding
+- 💬 No more strict command syntax
+- 😊 Friendly error messages (no technical codes!)
+- 🤖 Smart intent detection for volunteers and queries
+- 📱 Witty responses for unclear requests
+- 🗓️ Understands dates like "Saturday", "tomorrow", "next week"
 
-## 🏗 Architecture
+## Troubleshooting
+
+1. **Check container status**: `docker compose ps`
+2. **View logs**: `docker compose logs --tail 50`
+3. **Test webhook**: See [DEPLOYMENT.md](./DEPLOYMENT.md#troubleshooting)
+4. **Restart**: `docker compose restart`
+
+## Examples of What Works Now
 
 ```
-GroupMe ← Webhook → Bot ← APIs → Google Sheets
-                    ↓           ↗ Google Calendar  
-                 Docker      ↗
-                 Container ↗
+User: @PirateBot I've got snacks
+Bot: ✅ John has been assigned to snacks for 2025-10-15!
+
+User: @PirateBot when's the next game?
+Bot: 🏴‍☠️ Next Game: Saturday Game
+     Date: 2025-10-15
+     Time: 10:00 AM
+     Location: Field 3 (https://maps.google.com/...)
+     ...
+
+User: @PirateBot blah blah blah
+Bot: 🏴‍☠️ Ahoy! I'm not quite sure what you're asking, but I'm here to help! 
+     Try asking about the next game or volunteer to bring snacks! 🍪
 ```
 
-### Components
-- **Actix Web**: High-performance async web framework
-- **Reqwest**: HTTP client for API integrations
-- **Tokio**: Async runtime for handling concurrent requests
-- **Docker**: Containerized deployment with multi-stage builds
+## Team
 
-## 📊 Monitoring & Observability
-
-- **Health Checks**: Built-in health endpoint (`/health`)  
-- **Structured Logging**: JSON-formatted logs with request tracing
-- **Error Codes**: User-friendly error codes (SVC001, VOL001, etc.)
-- **Metrics**: Request timing and success/failure tracking
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow Rust best practices and idioms
-- Add tests for new functionality
-- Update documentation for user-facing changes
-- Ensure Docker builds succeed for all platforms
-
-## 🔄 CI/CD Pipeline
-
-The project includes GitHub Actions workflows for automated building and deployment:
-
-- **Automated Docker Builds**: Multi-platform images (amd64, arm64)
-- **Docker Hub Publishing**: Automatic tagging and publishing
-- **Deployment Artifacts**: Generated docker-compose and configuration files
-- **Security Scanning**: Container vulnerability assessments
-
-> **Note**: CI/CD requires GitHub token with `workflow` scope. Currently using manual builds.
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🏴‍☠️ Support
-
-- **Issues**: [GitHub Issues](https://github.com/rentbox81/groupme-pirates-bot/issues)
-- **Documentation**: [Full Documentation](https://github.com/rentbox81/groupme-pirates-bot/blob/main/DEPLOYMENT.md)
-- **Docker Hub**: [Image Repository](https://hub.docker.com/r/rentwork/groupme-pirates-bot)
+Built for the Pirates baseball team! ⚾🏴‍☠️
 
 ---
 
-**🏴‍☠️ Raise the Jolly Roger! Your team management just got a first mate! ⚾**
-
-*Built with ⚡ Rust and ❤️ for youth baseball teams*
+**Status**: ✅ Fully operational with conversational AI
+**Last Updated**: October 2025

@@ -1,8 +1,0 @@
-services:
-  groupme-bot:
-    ports:
-      - "18080:18080"
-    volumes:
-      - "./bot-project-468921-e3533c9644e0.json:/app/service-account.json:ro"
-    environment:
-      - GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json

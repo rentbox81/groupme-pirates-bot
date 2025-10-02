@@ -250,6 +250,16 @@ impl BotService {
                 self.handle_volunteer_assignment(date, role, person).await
             }
             
+            BotCommand::VolunteerNextGame(role, person) => {
+                // Find the next game date and volunteer for it
+                match self.find_next_event().await? {
+                    Some(event) => {
+                        self.handle_volunteer_assignment(event.event_date, role, person).await
+                    }
+                    None => Ok("❌ No upcoming games found to volunteer for.".to_string()),
+                }
+            }
+            
             BotCommand::ShowVolunteers(maybe_date) => {
                 self.handle_show_volunteers(maybe_date).await
             }

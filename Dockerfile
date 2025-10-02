@@ -22,37 +22,41 @@ RUN rm -rf src
 # Copy the actual source code
 COPY src ./src
 
-# Build the release binary (only the main binary)
+# Build the application
 RUN cargo build --release --bin groupme-bot
 
-# Use a minimal base image for the final container
+# Start runtime stage - use minimal Debian image
 FROM debian:bookworm-slim
 
-# Install SSL certificates, CA certificates, and curl for health checks
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy the built binary from the build stage
+# Copy the binary from the build stage
 COPY --from=build /app/target/release/groupme-bot ./groupme-bot
 
-# Create a non-root user
+# Copy service account JSON file
+COPY service-account.json ./service-account.json
+
+# Create a non-root user for security
 RUN useradd -r -s /bin/false appuser
 RUN chown appuser:appuser /app/groupme-bot
+RUN chown appuser:appuser /app/service-account.json
 
 # Switch to non-root user
 USER appuser
 
-# Expose the port the application listens on
+# Expose port
 EXPOSE 18080
 
-# Set environment variables
-ENV RUST_LOG=info
-ENV PORT=18080
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:18080/ || exit 1
 
-# The command to run the application
+# Run the application
 CMD ["./groupme-bot"]

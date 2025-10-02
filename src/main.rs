@@ -6,15 +6,19 @@ pub mod google_client;
 pub mod groupme_client;
 pub mod service;
 pub mod parser;
+pub mod conversational_parser;
+pub mod reminder;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use tracing::{info, error, warn};
 use tracing_actix_web::TracingLogger;
+use std::sync::Arc;
 
 use crate::config::Config;
 use crate::service::BotService;
 use crate::parser::CommandParser;
 use crate::models::GroupMeMessage;
+use crate::reminder::ReminderScheduler;
 
 // Application state
 struct AppState {
@@ -47,10 +51,11 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
             return HttpResponse::Ok().body("OK");
         }
         Err(e) => {
-            warn!("Failed to parse command: {}", e);
-            let error_response = "❌ Command error. Code: CMD001";
+            // Conversational error with friendly message
+            warn!("Conversational parsing resulted in friendly error: {}", e);
+            let error_response = format!("{}", e);
             if let Err(send_error) = data.bot_service.send_response(&error_response).await {
-                error!("Failed to send error response: {}", send_error);
+                error!("Failed to send friendly response: {}", send_error);
             }
             return HttpResponse::Ok().body("OK");
         }
@@ -65,7 +70,8 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
         }
         Err(e) => {
             error!("Failed to handle command: {}", e);
-            let error_response = "❌ Processing error. Code: SVC001";
+            // Send a friendly error instead of technical error codes
+            let error_response = "🏴‍☠️ Ahoy! I ran into a problem with that request. Try again in a moment, matey! ⚾";
             if let Err(send_error) = data.bot_service.send_response(error_response).await {
                 error!("Failed to send error response: {}", send_error);
             }
@@ -107,6 +113,11 @@ async fn main() -> std::io::Result<()> {
     };
 
     info!("Starting GroupMe bot '{}' on port {}", config.groupme_bot_name, config.port);
+
+    // Start reminder scheduler
+    let reminder_scheduler = Arc::new(ReminderScheduler::new(config.clone()));
+    reminder_scheduler.start();
+    info!("Reminder scheduler initialized");
 
     // Create services
     let bot_service = BotService::new(config.clone());

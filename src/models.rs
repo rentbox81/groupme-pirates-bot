@@ -63,6 +63,7 @@ pub enum BotCommand {
     Volunteer(NaiveDate, String, String),      // @Bot volunteer snacks 2025-01-15 John
     ShowVolunteers(Option<NaiveDate>),          // @Bot volunteers [date]
     Commands,                                   // @Bot commands
+    VolunteerNextGame(String, String), // role, person - resolved to next game
 }
 
 impl EventData {

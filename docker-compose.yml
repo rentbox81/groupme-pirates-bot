@@ -1,13 +1,30 @@
 
-
 services:
   groupme-bot:
     build: .
     env_file:
       - .env
     restart: unless-stopped
+    ports:
+      - "18080:18080"  # Port mapping for direct access (from override file)
     networks:
       - traefik
+    environment:
+      - GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json  # Explicit env var
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     labels:
       # Enable Traefik for this service
       - "traefik.enable=true"
@@ -15,26 +32,27 @@ services:
       # Define the network
       - "traefik.docker.network=traefik"
       
-      # HTTP router configuration
+      # HTTP router configuration (HTTPS)
       - "traefik.http.routers.${TEAM_NAME}bot.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
       - "traefik.http.routers.${TEAM_NAME}bot.entrypoints=websecure"
-      - "traefik.http.routers.${TEAM_NAME}bot.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.${TEAM_NAME}bot.tls.certresolver=${CERT_RESOLVER}"
       
-      # Service configuration
-      - "traefik.http.services.${TEAM_NAME}bot.loadbalancer.server.port=18080"
-      
-      # HTTP to HTTPS redirect
+      # HTTP redirect (from prod file)
       - "traefik.http.routers.${TEAM_NAME}bot-http.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
       - "traefik.http.routers.${TEAM_NAME}bot-http.entrypoints=web"
       - "traefik.http.routers.${TEAM_NAME}bot-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      # Security headers and rate limiting
+      - "traefik.http.routers.${TEAM_NAME}bot.middlewares=security-headers,${TEAM_NAME}bot-ratelimit"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Robots-Tag=noindex"
+      - "traefik.http.middlewares.${TEAM_NAME}bot-ratelimit.ratelimit.burst=100"
+      - "traefik.http.middlewares.${TEAM_NAME}bot-ratelimit.ratelimit.average=50"
+      
+      # Service configuration
+      - "traefik.http.services.${TEAM_NAME}bot.loadbalancer.server.port=18080"
 
 networks:
   traefik:

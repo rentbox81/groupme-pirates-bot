@@ -125,6 +125,9 @@ fn handle_command_mock(command: BotCommand, bot_name: &str) -> String {
         BotCommand::Volunteer(date, role, person) => {
             format!("✅ {} has been assigned to {} for {} (Mock Game)!", person, role, date)
         }
+        BotCommand::VolunteerNextGame(role, person) => {
+            format!("✅ {} has been assigned to {} for the next game (Mock)!", person, role)
+        }
         BotCommand::ShowVolunteers(maybe_date) => {
             if let Some(date) = maybe_date {
                 format!(
