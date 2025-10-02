@@ -53,12 +53,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Parse the command
-        match command_parser.parse_message(input) {
+        match command_parser.parse_message(input, None) {
             Ok(Some(command)) => {
                 println!("📝 Parsed command: {:?}", command);
                 
                 // Handle the command
-                match bot_service.handle_command(command).await {
+                match bot_service.handle_command(command, None).await {
                     Ok(response) => {
                         println!("🤖 Bot Response:");
                         println!("─────────────────");

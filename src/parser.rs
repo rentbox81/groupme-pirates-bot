@@ -20,7 +20,7 @@ impl CommandParser {
         }
     }
 
-    pub fn parse_message(&self, text: &str) -> Result<Option<BotCommand>> {
+    pub fn parse_message(&self, text: &str, sender_name: Option<&str>) -> Result<Option<BotCommand>> {
         let text = text.trim();
         
         // Check if message is directed at the bot
@@ -30,7 +30,7 @@ impl CommandParser {
         }
 
         // Try conversational parsing first
-        if let Some(intent) = self.conversational_parser.parse_message(text) {
+        if let Some(intent) = self.conversational_parser.parse_message(text, sender_name) {
             return self.intent_to_command(intent, text);
         }
 
@@ -150,7 +150,7 @@ mod tests {
         let parser = create_parser();
         
         // These should be understood conversationally
-        let result = parser.parse_message("@TestBot I've got snacks for Saturday John");
+        let result = parser.parse_message("@TestBot I've got snacks for Saturday John", None);
         assert!(result.is_ok());
     }
 
@@ -158,7 +158,7 @@ mod tests {
     fn test_conversational_game_query() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot when's the next game?");
+        let result = parser.parse_message("@TestBot when's the next game?", None);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::NextGame)));
     }
@@ -167,7 +167,7 @@ mod tests {
     fn test_unknown_intent_returns_friendly_message() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot blah blah random stuff");
+        let result = parser.parse_message("@TestBot blah blah random stuff", None);
         // Should return an error with a friendly message, not panic
         assert!(result.is_err());
         if let Err(BotError::InvalidCommand(msg)) = result {
@@ -182,7 +182,7 @@ mod tests {
     fn test_help_intent() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot help");
+        let result = parser.parse_message("@TestBot help", None);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::Commands)));
     }
@@ -191,7 +191,7 @@ mod tests {
     fn test_team_spirit() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot let's go pirates!");
+        let result = parser.parse_message("@TestBot let's go pirates!", None);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::LetsGo(_))));
     }
@@ -200,7 +200,7 @@ mod tests {
     fn test_volunteer_next_game() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot Hobbs have snacks for the next game");
+        let result = parser.parse_message("@TestBot Hobbs have snacks for the next game", None);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::VolunteerNextGame(_, _))));
     }
@@ -210,7 +210,7 @@ mod tests {
         let parser = create_parser();
         
         // No date specified - should default to next game
-        let result = parser.parse_message("@TestBot Hobbs have snacks");
+        let result = parser.parse_message("@TestBot Hobbs have snacks", None);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::VolunteerNextGame(_, _))));
     }

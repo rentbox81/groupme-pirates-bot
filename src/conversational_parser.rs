@@ -23,7 +23,7 @@ impl ConversationalParser {
     }
 
     /// Parse a message and extract intent
-    pub fn parse_message(&self, text: &str) -> Option<ParsedIntent> {
+    pub fn parse_message(&self, text: &str, sender_name: Option<&str>) -> Option<ParsedIntent> {
         let text = text.trim();
         let text_lower = text.to_lowercase();
         
@@ -41,14 +41,14 @@ impl ConversationalParser {
         }
 
         // Detect intent based on keywords and patterns
-        let intent = self.detect_intent(&cleaned_text, text);
+        let intent = self.detect_intent(&cleaned_text, text, sender_name);
         Some(intent)
     }
 
-    fn detect_intent(&self, text_lower: &str, original_text: &str) -> ParsedIntent {
+    fn detect_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
         // Volunteer intent detection
         if self.is_volunteer_intent(text_lower) {
-            return self.parse_volunteer_intent(text_lower, original_text);
+            return self.parse_volunteer_intent(text_lower, original_text, sender_name);
         }
 
         // Game query intent detection
@@ -92,11 +92,14 @@ impl ConversationalParser {
         has_volunteer_keyword || has_role_keyword
     }
 
-    fn parse_volunteer_intent(&self, text_lower: &str, original_text: &str) -> ParsedIntent {
+    fn parse_volunteer_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
         let role = self.extract_volunteer_role(text_lower);
         let date = self.extract_date(text_lower);
         let person = self.extract_person_name(original_text);
         let relative_game = self.extract_relative_game(text_lower);
+
+        // If no person extracted from text, use sender's name as fallback
+        let person = person.or_else(|| sender_name.map(|s| s.to_string()));
 
         ParsedIntent::Volunteer { role, date, person, relative_game }
     }
@@ -118,54 +121,69 @@ impl ConversationalParser {
         None
     }
 
-    fn extract_person_name(&self, text: &str) -> Option<String> {
-        // Look for patterns like "- Name" or "for Name" or just capitalized words
-        let words: Vec<&str> = text.split_whitespace().collect();
-        
-        // Check for "for [Name]" pattern
-        if let Some(for_idx) = words.iter().position(|&w| w.to_lowercase() == "for") {
-            if for_idx + 1 < words.len() {
-                let name_parts: Vec<&str> = words[for_idx + 1..].iter()
-                    .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
-                    .copied()
-                    .collect();
-                if !name_parts.is_empty() {
-                    return Some(name_parts.join(" "));
-                }
+fn extract_person_name(&self, text: &str) -> Option<String> {
+    // Words to exclude (pronouns, contractions, etc.)
+    let excluded_words = [
+        "i", "i've", "i'll", "i'm", "we", "we've", "we'll", "we're",
+        "you", "you've", "you'll", "he", "she", "they", "it"
+    ];
+    
+    let words: Vec<&str> = text.split_whitespace().collect();
+    
+    // Helper to check if word is excluded
+    let is_excluded = |word: &str| -> bool {
+        let word_lower = word.to_lowercase().trim_matches('\'').to_string();
+        excluded_words.contains(&word_lower.as_str())
+    };
+    
+    // Check for "for [Name]" pattern
+    if let Some(for_idx) = words.iter().position(|&w| w.to_lowercase() == "for") {
+        if for_idx + 1 < words.len() {
+            let name_parts: Vec<&str> = words[for_idx + 1..].iter()
+                .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+                .filter(|w| !is_excluded(w))
+                .copied()
+                .collect();
+            if !name_parts.is_empty() {
+                return Some(name_parts.join(" "));
             }
         }
-
-        // Check for "- [Name]" pattern
-        if let Some(dash_idx) = words.iter().position(|&w| w == "-") {
-            if dash_idx + 1 < words.len() {
-                let name_parts: Vec<&str> = words[dash_idx + 1..].iter()
-                    .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
-                    .copied()
-                    .collect();
-                if !name_parts.is_empty() {
-                    return Some(name_parts.join(" "));
-                }
-            }
-        }
-
-        // Look for capitalized words (potential names) after role keywords
-        for (i, word) in words.iter().enumerate() {
-            if word.chars().next().map_or(false, |c| c.is_uppercase()) 
-                && !word.starts_with('@') 
-                && word.len() > 1 {
-                // Collect consecutive capitalized words
-                let name_parts: Vec<&str> = words[i..].iter()
-                    .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
-                    .copied()
-                    .collect();
-                if !name_parts.is_empty() {
-                    return Some(name_parts.join(" "));
-                }
-            }
-        }
-
-        None
     }
+
+    // Check for "- [Name]" pattern
+    if let Some(dash_idx) = words.iter().position(|&w| w == "-") {
+        if dash_idx + 1 < words.len() {
+            let name_parts: Vec<&str> = words[dash_idx + 1..].iter()
+                .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+                .filter(|w| !is_excluded(w))
+                .copied()
+                .collect();
+            if !name_parts.is_empty() {
+                return Some(name_parts.join(" "));
+            }
+        }
+    }
+
+    // Look for capitalized words (potential names) - but exclude pronouns
+    for (i, word) in words.iter().enumerate() {
+        if word.chars().next().map_or(false, |c| c.is_uppercase()) 
+            && !word.starts_with('@') 
+            && word.len() > 1
+            && !is_excluded(word) {
+            // Collect consecutive capitalized words
+            let name_parts: Vec<&str> = words[i..].iter()
+                .take_while(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+                .filter(|w| !is_excluded(w))
+                .copied()
+                .collect();
+            if !name_parts.is_empty() {
+                return Some(name_parts.join(" "));
+            }
+        }
+    }
+
+    None
+}
 
     fn extract_date(&self, text: &str) -> Option<NaiveDate> {
         let today = Utc::now().date_naive();

@@ -171,7 +171,7 @@ impl BotService {
         Ok(events.get(&query_date).cloned())
     }
 
-    pub async fn handle_command(&self, command: BotCommand) -> Result<String> {
+    pub async fn handle_command(&self, command: BotCommand, sender_name: Option<&str>) -> Result<String> {
         match command {
             BotCommand::NextGame => {
                 // @bot next game
@@ -247,14 +247,14 @@ impl BotService {
             }
             
             BotCommand::Volunteer(date, role, person) => {
-                self.handle_volunteer_assignment(date, role, person).await
+                self.handle_volunteer_assignment(date, role, person, sender_name).await
             }
             
             BotCommand::VolunteerNextGame(role, person) => {
                 // Find the next game date and volunteer for it
                 match self.find_next_event().await? {
                     Some(event) => {
-                        self.handle_volunteer_assignment(event.event_date, role, person).await
+                        self.handle_volunteer_assignment(event.event_date, role, person, sender_name).await
                     }
                     None => Ok("❌ No upcoming games found to volunteer for.".to_string()),
                 }
@@ -312,7 +312,7 @@ impl BotService {
         self.groupme_client.send_message(message).await
     }
     
-    async fn handle_volunteer_assignment(&self, date: NaiveDate, role: String, person: String) -> Result<String> {
+    async fn handle_volunteer_assignment(&self, date: NaiveDate, role: String, person: String, sender_name: Option<&str>) -> Result<String> {
         match self.find_event_by_date(date).await? {
             Some(mut event) => {
                 if event.data.is_role_available(&role) {
@@ -326,8 +326,18 @@ impl BotService {
                                     cache.insert(date, event.clone());
                                 }
                                 
-                                Ok(format!("✅ {} has been assigned to {} for {} ({})!", 
-                                         person, role, date, event.event_summary))
+                                let message = if let Some(sender) = sender_name {
+                                    let sender_lower = sender.to_lowercase();
+                                    let person_lower = person.to_lowercase();
+                                    if sender_lower == person_lower || sender_lower.contains(&person_lower) || person_lower.contains(&sender_lower) {
+                                        format!("@{} ✅ You've been assigned to {} for {} ({})!", sender, role, date, event.format_matchup())
+                                    } else {
+                                        format!("✅ {} has been assigned to {} for {} ({})!", person, role, date, event.format_matchup())
+                                    }
+                                } else {
+                                    format!("✅ {} has been assigned to {} for {} ({})!", person, role, date, event.format_matchup())
+                                };
+                                Ok(message)
                             } else {
                                 Ok("❌ Assignment failed. Code: VOL002".to_string())
                             }
@@ -348,7 +358,7 @@ impl BotService {
                     
                     if let Some(current) = current_volunteer {
                         Ok(format!("❌ {} is already assigned to {} for {} ({}).", 
-                                 current, role, date, event.event_summary))
+                                 current, role, date, event.format_matchup()))
                     } else {
                         Ok("❌ Assignment failed. Code: VOL003".to_string())
                     }
@@ -364,7 +374,7 @@ impl BotService {
                 match self.find_event_by_date(date).await? {
                     Some(event) => {
                         let mut response = format!("🏴‍☠️ Volunteer status for {} ({}):\n\n", 
-                                                  date, event.event_summary);
+                                                  date, event.format_matchup());
                         response.push_str(&event.data.format_all());
                         response.push_str(&format!("\n{}", event.data.format_volunteer_needs()));
                         Ok(response)
@@ -389,7 +399,7 @@ impl BotService {
                     let mut response = "🏴‍☠️ Volunteer status for upcoming events:\n\n".to_string();
                     
                     for (date, event) in upcoming_events.iter().take(5) {
-                        response.push_str(&format!("{} ({}):\n", date, event.event_summary));
+                        response.push_str(&format!("{} ({}):\n", date, event.format_matchup()));
                         response.push_str(&format!("{}\n", event.data.format_volunteer_needs()));
                         response.push('\n');
                     }

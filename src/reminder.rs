@@ -105,7 +105,8 @@ impl ReminderScheduler {
     }
 
     async fn send_24h_reminder(&self, event: &crate::models::CorrelatedEvent) -> Result<(), Box<dyn std::error::Error>> {
-        let mut message = format!("⏰ Game Reminder! 24 hours until:\n\n🏴‍☠️ {}\n", event.event_summary);
+        let matchup = event.format_matchup();
+        let mut message = format!("⏰ Game Reminder! 24 hours until:\n\n🏴‍☠️ {}\n", matchup);
         message.push_str(&event.data.format_all());
         message.push_str("\n");
         message.push_str(&event.data.format_volunteer_needs());

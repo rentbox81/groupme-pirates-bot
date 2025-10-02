@@ -169,3 +169,70 @@ impl EventData {
         }
     }
 }
+
+impl CorrelatedEvent {
+    /// Parse and format the matchup from the calendar summary
+    /// Returns a formatted string like "Pirates vs Dragons" or falls back to home team
+    pub fn format_matchup(&self) -> String {
+        if let Some((team1, team2)) = Self::parse_matchup(&self.event_summary) {
+            // Determine which team is home based on home_team field
+            let home_team_lower = self.data.home_team.to_lowercase();
+            
+            if team1.to_lowercase().contains(&home_team_lower) || home_team_lower.contains(&team1.to_lowercase()) {
+                format!("{} (Home) vs {}", team1, team2)
+            } else if team2.to_lowercase().contains(&home_team_lower) || home_team_lower.contains(&team2.to_lowercase()) {
+                format!("{} vs {} (Home)", team1, team2)
+            } else {
+                // Can't determine home team, just show matchup
+                format!("{} vs {}", team1, team2)
+            }
+        } else {
+            // Fallback to just showing home team
+            format!("Home: {}", self.data.home_team)
+        }
+    }
+    
+    /// Parse matchup from calendar summary
+    /// Examples: "Pirates vs Dragons", "8:00 AM - Pirates vs Dragons"
+    fn parse_matchup(summary: &str) -> Option<(String, String)> {
+        let summary_lower = summary.to_lowercase();
+        
+        if let Some(vs_pos) = summary_lower.find(" vs ") {
+            let before_vs = summary[..vs_pos].trim();
+            let after_vs = summary[vs_pos + 4..].trim();
+            
+            let team1 = Self::extract_team_name(before_vs);
+            let team2 = Self::extract_team_name(after_vs);
+            
+            if !team1.is_empty() && !team2.is_empty() {
+                return Some((team1, team2));
+            }
+        }
+        
+        None
+    }
+    
+    fn extract_team_name(text: &str) -> String {
+        let text = text.trim();
+        
+        // If there's a dash, take everything after the last dash
+        if let Some(dash_pos) = text.rfind('-') {
+            let after_dash = text[dash_pos + 1..].trim();
+            if !after_dash.is_empty() {
+                return Self::clean_team_name(after_dash);
+            }
+        }
+        
+        Self::clean_team_name(text)
+    }
+    
+    fn clean_team_name(text: &str) -> String {
+        let text = text.trim();
+        // Remove parenthetical info like "(Home)"
+        if let Some(paren_pos) = text.find('(') {
+            text[..paren_pos].trim().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+}
