@@ -201,10 +201,41 @@ impl CorrelatedEvent {
     }
     
     /// Parse matchup from calendar summary
-    /// Examples: "Pirates vs Dragons", "8:00 AM - Pirates vs Dragons"
+    /// The calendar format from TeamSideline is: " Vs [OpponentTeam] - [Field] ([HomeTeam] - [Coach])"
+    /// Example: " Vs Chaos 8U - Hall (Pirates - Hines)"
+    /// Returns (HomeTeam, OpponentTeam) tuple
     fn parse_matchup(summary: &str) -> Option<(String, String)> {
+        let summary = summary.trim();
         let summary_lower = summary.to_lowercase();
         
+        // Look for the TeamSideline pattern: "Vs [Team] - [Field] ([HomeTeam] - [Coach])"
+        if summary_lower.starts_with("vs ") {
+            // Find the first " - " (separates opponent from field)
+            if let Some(first_dash_pos) = summary.find(" - ") {
+                // Extract opponent team (between "Vs " and first " - ")
+                let opponent = summary[3..first_dash_pos].trim().to_string();
+                
+                // Find parentheses that contain home team info
+                if let Some(paren_start) = summary.find('(') {
+                    if let Some(paren_end) = summary.find(')') {
+                        // Extract content inside parentheses
+                        let paren_content = &summary[paren_start + 1..paren_end];
+                        
+                        // Find dash inside parentheses (separates home team from coach)
+                        if let Some(dash_in_paren) = paren_content.find(" - ") {
+                            let home_team = paren_content[..dash_in_paren].trim().to_string();
+                            
+                            if !opponent.is_empty() && !home_team.is_empty() {
+                                return Some((home_team, opponent));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback: try the old format for backward compatibility
+        // "Team1 vs Team2" or similar patterns
         if let Some(vs_pos) = summary_lower.find(" vs ") {
             let before_vs = summary[..vs_pos].trim();
             let after_vs = summary[vs_pos + 4..].trim();
