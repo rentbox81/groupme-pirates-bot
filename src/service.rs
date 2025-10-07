@@ -79,11 +79,11 @@ impl BotService {
                     scoreboard,
                     pitch_count,
                 );
-                
+                // PRESERVE CALENDAR SUMMARY:                 
                 // Update the event summary to be more descriptive using sheet data
-                if !time.is_empty() && !home_team.is_empty() {
-                    event.event_summary = format!("{} - {}", time, home_team);
-                }
+                // PRESERVE CALENDAR SUMMARY:                 if !time.is_empty() && !home_team.is_empty() {
+                // PRESERVE CALENDAR SUMMARY:                     event.event_summary = format!("{} - {}", time, home_team);
+                // PRESERVE CALENDAR SUMMARY:                 }
                 
                 info!("Updated event {} with sheet data", date);
             } else {
