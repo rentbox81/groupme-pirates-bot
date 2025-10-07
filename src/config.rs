@@ -9,6 +9,8 @@ pub struct Config {
     pub calendar_webcal_url: String,
     pub google_api_key: String,
     pub port: u16,
+    pub reminder_start_hour: u32,
+    pub reminder_end_hour: u32,
 }
 
 impl Config {
@@ -33,6 +35,16 @@ impl Config {
             .parse()
             .map_err(|_| BotError::EnvVar("PORT must be a valid number".to_string()))?;
 
+        let reminder_start_hour = env::var("REMINDER_START_HOUR")
+            .unwrap_or_else(|_| "9".to_string())
+            .parse()
+            .map_err(|_| BotError::EnvVar("REMINDER_START_HOUR must be a valid number (0-23)".to_string()))?;
+
+        let reminder_end_hour = env::var("REMINDER_END_HOUR")
+            .unwrap_or_else(|_| "21".to_string())
+            .parse()
+            .map_err(|_| BotError::EnvVar("REMINDER_END_HOUR must be a valid number (0-23)".to_string()))?;
+
         // Basic validation
         if groupme_bot_id.is_empty() {
             return Err(BotError::EnvVar("GROUPME_BOT_ID cannot be empty".to_string()));
@@ -42,6 +54,18 @@ impl Config {
             return Err(BotError::EnvVar("GOOGLE_API_KEY cannot be empty".to_string()));
         }
 
+        if reminder_start_hour >= 24 {
+            return Err(BotError::EnvVar("REMINDER_START_HOUR must be between 0 and 23".to_string()));
+        }
+
+        if reminder_end_hour > 24 {
+            return Err(BotError::EnvVar("REMINDER_END_HOUR must be between 1 and 24".to_string()));
+        }
+
+        if reminder_start_hour >= reminder_end_hour {
+            return Err(BotError::EnvVar("REMINDER_START_HOUR must be less than REMINDER_END_HOUR".to_string()));
+        }
+
         Ok(Config {
             groupme_bot_id,
             groupme_bot_name,
@@ -49,6 +73,8 @@ impl Config {
             calendar_webcal_url,
             google_api_key,
             port,
+            reminder_start_hour,
+            reminder_end_hour,
         })
     }
 }

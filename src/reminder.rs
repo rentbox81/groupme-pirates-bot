@@ -1,4 +1,4 @@
-use chrono::{Utc, Duration};
+use chrono::{Utc, Duration, Timelike};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -18,23 +18,28 @@ pub struct ReminderState {
 pub struct ReminderScheduler {
     bot_service: Arc<BotService>,
     state: Arc<RwLock<ReminderState>>,
+    config: Config,
 }
 
 impl ReminderScheduler {
     pub fn new(config: Config) -> Self {
-        let bot_service = Arc::new(BotService::new(config));
+        let bot_service = Arc::new(BotService::new(config.clone()));
         let state = Arc::new(RwLock::new(ReminderState::default()));
         
         Self {
             bot_service,
             state,
+            config,
         }
     }
 
     /// Start the reminder scheduler in the background
     pub fn start(self: Arc<Self>) {
+        let start_hour = self.config.reminder_start_hour;
+        let end_hour = self.config.reminder_end_hour;
+        
         tokio::spawn(async move {
-            info!("Reminder scheduler started");
+            info!("Reminder scheduler started (active hours: {}:00 - {}:00)", start_hour, end_hour);
             
             loop {
                 // Check every 5 minutes
@@ -47,7 +52,22 @@ impl ReminderScheduler {
         });
     }
 
+    /// Check if current time is within acceptable reminder hours
+    fn is_within_reminder_hours(&self) -> bool {
+        let now = Utc::now().naive_local();
+        let current_hour = now.hour();
+        
+        // Check if current hour is within the configured range
+        current_hour >= self.config.reminder_start_hour && current_hour < self.config.reminder_end_hour
+    }
+
     async fn check_and_send_reminders(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // Check if we're within acceptable reminder hours
+        if !self.is_within_reminder_hours() {
+            // Silently skip - don't send reminders too early or too late
+            return Ok(());
+        }
+
         let now = Utc::now().naive_local();
         
         // Get next game
@@ -68,7 +88,7 @@ impl ReminderScheduler {
                     };
                     
                     if should_send {
-                        info!("Sending 24-hour reminder for game on {}", game_key);
+                        info!("Sending 24-hour reminder for game on {} (current hour: {})", game_key, now.hour());
                         self.send_24h_reminder(&event).await?;
                         let mut state = self.state.write().await;
                         state.sent_24h_reminders.insert(game_key.clone());
@@ -83,7 +103,7 @@ impl ReminderScheduler {
                     };
                     
                     if should_send {
-                        info!("Sending 15-minute reminder for game on {}", game_key);
+                        info!("Sending 15-minute reminder for game on {} (current hour: {})", game_key, now.hour());
                         self.send_15m_reminder().await?;
                         let mut state = self.state.write().await;
                         state.sent_15m_reminders.insert(game_key);
