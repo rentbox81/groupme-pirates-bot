@@ -1,4 +1,4 @@
-use chrono::{Utc, Duration, Timelike};
+use chrono::{Local, Duration, Timelike};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -54,7 +54,7 @@ impl ReminderScheduler {
 
     /// Check if current time is within acceptable reminder hours
     fn is_within_reminder_hours(&self) -> bool {
-        let now = Utc::now().naive_local();
+        let now = Local::now().naive_local();
         let current_hour = now.hour();
         
         // Check if current hour is within the configured range
@@ -68,7 +68,7 @@ impl ReminderScheduler {
             return Ok(());
         }
 
-        let now = Utc::now().naive_local();
+        let now = Local::now().naive_local();
         
         // Get next game
         match self.bot_service.find_next_event().await {
@@ -162,7 +162,7 @@ impl ReminderScheduler {
     }
 
     async fn cleanup_old_reminders(&self) {
-        let now = Utc::now().naive_local().date();
+        let now = Local::now().naive_local().date();
         
         let mut state = self.state.write().await;
         // Remove reminders for games that are more than 1 day old

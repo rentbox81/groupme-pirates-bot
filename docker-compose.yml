@@ -11,6 +11,7 @@ services:
       - traefik
     environment:
       - GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json  # Explicit env var
+      - TZ=America/Chicago  # Set timezone to Central Time (CDT/CST)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:18080/"]
       interval: 30s
