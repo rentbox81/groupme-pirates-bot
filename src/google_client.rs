@@ -44,7 +44,13 @@ impl GoogleClient {
 
     pub async fn get_calendar_events(&self) -> Result<Vec<(NaiveDate, String)>> {
         // Convert webcal:// URL to https:// for HTTP requests
-        let https_url = self.config.calendar_webcal_url.replace("webcal://", "https://");
+        // Return empty vec if calendar is not configured
+        let calendar_url = match &self.config.calendar_webcal_url {
+            Some(url) => url,
+            None => return Ok(vec![]),
+        };
+
+        let https_url = calendar_url.clone().replace("webcal://", "https://");
         
         info!("Fetching calendar events from webcal URL: {}", https_url);
         

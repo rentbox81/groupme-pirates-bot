@@ -15,7 +15,6 @@ pub enum ParsedIntent {
     TeamSpirit,
     Help,
     Unknown,
-    ConversationalResponse { message: String },
 }
 
 impl ConversationalParser {
@@ -71,12 +70,6 @@ impl ConversationalParser {
         if self.is_help_intent(text_lower) {
             return ParsedIntent::Help;
         }
-        // Conversational message detection
-        if self.is_conversational_message(text_lower) {
-            let message = self.get_conversational_response(text_lower);
-            return ParsedIntent::ConversationalResponse { message };
-        }
-
 
         // Unknown intent
         ParsedIntent::Unknown
@@ -100,7 +93,7 @@ impl ConversationalParser {
     }
 
     fn parse_volunteer_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
-        let roles = self.extract_volunteer_roless(text_lower);
+        let roles = self.extract_volunteer_roles(text_lower);
         let date = self.extract_date(text_lower);
         let person = self.extract_person_name(original_text);
         let relative_game = self.extract_relative_game(text_lower);
@@ -111,7 +104,7 @@ impl ConversationalParser {
         ParsedIntent::Volunteer { roles, date, person, relative_game }
     }
 
-    fn extract_volunteer_roless(&self, text: &str) -> Vec<String> {
+    fn extract_volunteer_roles(&self, text: &str) -> Vec<String> {
         let role_mappings = [
             (vec!["snacks", "snack", "food", "treats"], "snacks"),
             (vec!["livestream", "stream", "streaming", "live"], "livestream"),
@@ -390,25 +383,6 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
         help_keywords.iter().any(|kw| text.contains(kw))
     }
 
-    fn is_conversational_message(&self, text: &str) -> bool {
-        let conversational_keywords = ["scared", "fear", "thank", "thanks", "hi", "hello", "funny", "lol"];
-        conversational_keywords.iter().any(|kw| text.contains(kw))
-    }
-
-    fn get_conversational_response(&self, text: &str) -> String {
-        if text.contains("scared") || text.contains("fear") { self.get_fear_response() }
-        else if text.contains("thank") { self.get_thanks_response() }
-        else if text.contains("funny") || text.contains("lol") { self.get_humor_response() }
-        else { self.get_generic_conversational_response() }
-    }
-
-    fn get_fear_response(&self) -> String { "🏴‍☠️ No need to fear! I'm just here to help with baseball. ⚾".to_string() }
-    fn get_humor_response(&self) -> String { "⚾ Humor setting: TARS level. 75%% honesty. 🤖".to_string() }
-    fn get_thanks_response(&self) -> String { "🏴‍☠️ You're welcome! Happy to help. ⚾".to_string() }
-    fn get_positive_response(&self) -> String { "🏴‍☠️ Thanks! I do my best. ⚾".to_string() }
-    fn get_negative_response(&self) -> String { "🏴‍☠️ Sorry! Tell me how to improve. 🔧".to_string() }
-    fn get_generic_conversational_response(&self) -> String { "🏴‍☠️ Hi! I help with schedules and volunteers. ⚾".to_string() }
-
     /// Generate a witty iPhone response
     pub fn get_witty_response(&self) -> String {
         let responses = [
@@ -490,7 +464,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case);
             assert!(matches!(intent, Some(ParsedIntent::Volunteer { .. })));
         }
     }
@@ -507,7 +481,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case);
             assert!(matches!(intent, Some(ParsedIntent::GameQuery { .. })));
         }
     }
@@ -526,9 +500,9 @@ mod tests {
     fn test_role_extraction() {
         let parser = create_parser();
         
-        assert_eq!(parser.extract_volunteer_roless("i've got snacks"), vec!["snacks".to_string()]);
-        assert_eq!(parser.extract_volunteer_roless("livestream for me"), vec!["livestream".to_string()]);
-        assert_eq!(parser.extract_volunteer_roless("scoreboard please"), vec!["scoreboard".to_string()]);
+        assert_eq!(parser.extract_volunteer_role("i've got snacks"), Some("snacks".to_string()));
+        assert_eq!(parser.extract_volunteer_role("livestream for me"), Some("livestream".to_string()));
+        assert_eq!(parser.extract_volunteer_role("scoreboard please"), Some("scoreboard".to_string()));
     }
     
     #[test]

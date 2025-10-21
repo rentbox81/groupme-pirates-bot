@@ -34,14 +34,14 @@ impl BotService {
     }
 
     pub async fn correlate_data(&self) -> Result<HashMap<NaiveDate, CorrelatedEvent>> {
-        info!("Starting data correlation (sheets-first)");
+        info!("Starting data correlation");
         
-        let sheets_data = self.google_client.get_sheets_data().await?;
         let calendar_events = self.google_client.get_calendar_events().await?;
+        let sheets_data = self.google_client.get_sheets_data().await?;
         
         let mut correlated_map = HashMap::new();
         
-        // Start with sheets data as the source of truth
+        // Start with calendar events as the source of truth
         for (date, summary) in calendar_events {
             // Create placeholder EventData for events without sheet data
             let placeholder_data = EventData::new(

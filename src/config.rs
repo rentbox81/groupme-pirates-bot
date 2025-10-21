@@ -6,7 +6,7 @@ pub struct Config {
     pub groupme_bot_id: String,
     pub groupme_bot_name: String,
     pub sheet_id: String,
-    pub calendar_webcal_url: String,
+    pub calendar_webcal_url: Option<String>,
     pub google_api_key: String,
     pub port: u16,
     pub reminder_start_hour: u32,
@@ -24,8 +24,7 @@ impl Config {
         let sheet_id = env::var("SHEET_ID")
             .map_err(|_| BotError::EnvVar("SHEET_ID".to_string()))?;
         
-        let calendar_webcal_url = env::var("CALENDAR_WEBCAL_URL")
-            .map_err(|_| BotError::EnvVar("CALENDAR_WEBCAL_URL".to_string()))?;
+        let calendar_webcal_url = env::var("CALENDAR_WEBCAL_URL").ok();
         
         let google_api_key = env::var("GOOGLE_API_KEY")
             .map_err(|_| BotError::EnvVar("GOOGLE_API_KEY".to_string()))?;

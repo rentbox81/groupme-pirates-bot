@@ -23,7 +23,7 @@ pub enum BotError {
     #[error("No event found for the specified criteria")]
     EventNotFound,
     
-    #[error("Invalid command format: {0}")]
+    #[error("{0}")]
     InvalidCommand(String),
 }
 

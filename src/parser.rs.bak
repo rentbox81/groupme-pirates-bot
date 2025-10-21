@@ -40,8 +40,8 @@ impl CommandParser {
 
     fn intent_to_command(&self, intent: ParsedIntent, original_text: &str) -> Result<Option<BotCommand>> {
         match intent {
-            ParsedIntent::Volunteer { roles, date, person, relative_game } => {
-                self.handle_volunteer_intent(roles, date, person, relative_game, original_text)
+            ParsedIntent::Volunteer { role, date, person, relative_game } => {
+                self.handle_volunteer_intent(role, date, person, relative_game, original_text)
             }
             ParsedIntent::GameQuery { category, count, relative: _ } => {
                 self.handle_game_query_intent(category, count)
@@ -55,9 +55,6 @@ impl CommandParser {
             ParsedIntent::Help => {
                 Ok(Some(BotCommand::Commands))
             }
-            ParsedIntent::ConversationalResponse { message } => {
-                Err(BotError::InvalidCommand(message))
-            },
             ParsedIntent::Unknown => {
                 // Return a witty response instead of an error
                 Err(BotError::InvalidCommand(self.conversational_parser.get_witty_response()))
@@ -67,13 +64,13 @@ impl CommandParser {
 
     fn handle_volunteer_intent(
         &self, 
-        roles: Vec<String>, 
+        role: Option<String>, 
         date: Option<NaiveDate>, 
         person: Option<String>,
         relative_game: Option<usize>,
         _original_text: &str
     ) -> Result<Option<BotCommand>> {
-        match (roles.first().cloned(), date, person, relative_game) {
+        match (role, date, person, relative_game) {
             // Explicit date provided
             (Some(r), Some(d), Some(p), _) => {
                 Ok(Some(BotCommand::Volunteer(d, r, p)))
@@ -174,7 +171,7 @@ mod tests {
         // Should return an error with a friendly message, not panic
         assert!(result.is_err());
         if let Err(BotError::InvalidCommand(msg)) = result {
-            // Check message contains expected content
+            // Should contain a friendly response - check for common words
             assert!(msg.contains("🏴‍☠️") || msg.contains("⚾") || msg.contains("Ahoy") || msg.contains("help"));
         } else {
             panic!("Expected InvalidCommand error");

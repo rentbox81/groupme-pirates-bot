@@ -28,6 +28,8 @@ struct AppState {
 
 #[post("/webhook")]
 async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder {
+    // Debug: Log raw webhook payload to see what GroupMe sends
+    info!("Raw GroupMe webhook payload: {}", req_body);
     let msg: GroupMeMessage = match serde_json::from_str(&req_body) {
         Ok(m) => m,
         Err(e) => {

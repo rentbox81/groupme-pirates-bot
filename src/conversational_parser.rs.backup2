@@ -71,12 +71,6 @@ impl ConversationalParser {
         if self.is_help_intent(text_lower) {
             return ParsedIntent::Help;
         }
-        // Conversational message detection
-        if self.is_conversational_message(text_lower) {
-            let message = self.get_conversational_response(text_lower);
-            return ParsedIntent::ConversationalResponse { message };
-        }
-
 
         // Unknown intent
         ParsedIntent::Unknown
@@ -389,25 +383,6 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
         let help_keywords = ["help", "commands", "what can you do", "how"];
         help_keywords.iter().any(|kw| text.contains(kw))
     }
-
-    fn is_conversational_message(&self, text: &str) -> bool {
-        let conversational_keywords = ["scared", "fear", "thank", "thanks", "hi", "hello", "funny", "lol"];
-        conversational_keywords.iter().any(|kw| text.contains(kw))
-    }
-
-    fn get_conversational_response(&self, text: &str) -> String {
-        if text.contains("scared") || text.contains("fear") { self.get_fear_response() }
-        else if text.contains("thank") { self.get_thanks_response() }
-        else if text.contains("funny") || text.contains("lol") { self.get_humor_response() }
-        else { self.get_generic_conversational_response() }
-    }
-
-    fn get_fear_response(&self) -> String { "🏴‍☠️ No need to fear! I'm just here to help with baseball. ⚾".to_string() }
-    fn get_humor_response(&self) -> String { "⚾ Humor setting: TARS level. 75%% honesty. 🤖".to_string() }
-    fn get_thanks_response(&self) -> String { "🏴‍☠️ You're welcome! Happy to help. ⚾".to_string() }
-    fn get_positive_response(&self) -> String { "🏴‍☠️ Thanks! I do my best. ⚾".to_string() }
-    fn get_negative_response(&self) -> String { "🏴‍☠️ Sorry! Tell me how to improve. 🔧".to_string() }
-    fn get_generic_conversational_response(&self) -> String { "🏴‍☠️ Hi! I help with schedules and volunteers. ⚾".to_string() }
 
     /// Generate a witty iPhone response
     pub fn get_witty_response(&self) -> String {

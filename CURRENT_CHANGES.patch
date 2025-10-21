@@ -1,0 +1,161 @@
+diff --git a/src/conversational_parser.rs b/src/conversational_parser.rs
+index cbf6ef6..6ae4b3d 100644
+--- a/src/conversational_parser.rs
++++ b/src/conversational_parser.rs
+@@ -9,12 +9,13 @@ pub struct ConversationalParser {
+ 
+ #[derive(Debug, Clone)]
+ pub enum ParsedIntent {
+-    Volunteer { role: Option<String>, date: Option<NaiveDate>, person: Option<String>, relative_game: Option<usize> },
++    Volunteer { roles: Vec<String>, date: Option<NaiveDate>, person: Option<String>, relative_game: Option<usize> },
+     GameQuery { category: Option<String>, count: Option<usize>, relative: Option<String> },
+     VolunteerQuery { date: Option<NaiveDate> },
+     TeamSpirit,
+     Help,
+     Unknown,
++    ConversationalResponse { message: String },
+ }
+ 
+ impl ConversationalParser {
+@@ -93,7 +94,7 @@ impl ConversationalParser {
+     }
+ 
+     fn parse_volunteer_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
+-        let role = self.extract_volunteer_role(text_lower);
++        let roles = self.extract_volunteer_roles(text_lower);
+         let date = self.extract_date(text_lower);
+         let person = self.extract_person_name(original_text);
+         let relative_game = self.extract_relative_game(text_lower);
+@@ -101,10 +102,10 @@ impl ConversationalParser {
+         // If no person extracted from text, use sender's name as fallback
+         let person = person.or_else(|| sender_name.map(|s| s.to_string()));
+ 
+-        ParsedIntent::Volunteer { role, date, person, relative_game }
++        ParsedIntent::Volunteer { roles, date, person, relative_game }
+     }
+ 
+-    fn extract_volunteer_role(&self, text: &str) -> Option<String> {
++    fn extract_volunteer_roles(&self, text: &str) -> Vec<String> {
+         let role_mappings = [
+             (vec!["snacks", "snack", "food", "treats"], "snacks"),
+             (vec!["livestream", "stream", "streaming", "live"], "livestream"),
+@@ -112,13 +113,16 @@ impl ConversationalParser {
+             (vec!["pitchcount", "pitch count", "pitch", "pitches"], "pitchcount"),
+         ];
+ 
++        let mut found_roles = Vec::new();
++
+         for (keywords, role) in &role_mappings {
++
+             if keywords.iter().any(|kw| text.contains(kw)) {
+-                return Some(role.to_string());
++                found_roles.push(role.to_string());
+             }
+         }
+ 
+-        None
++        found_roles
+     }
+ 
+ fn extract_person_name(&self, text: &str) -> Option<String> {
+@@ -386,11 +390,20 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
+             "🏴‍☠️ Ahoy! I'm not quite sure what you're asking, but I'm here to help! Try asking about the next game or volunteer to bring snacks! 🍪",
+             "⚾ Hmm, that's a new one! Maybe ask me 'when's the next game?' or 'I've got snacks'? 🤔",
+             "🏴‍☠️ I'm still learning pirate speak! Try asking me about games, volunteers, or say 'let's go Pirates!' 🏴‍☠️",
+-            "📱 iPhone autocorrect strikes again? 😏 Try asking about the schedule or volunteering!",
++            "📱 iPhone autocorrect failing you? Shocking. Nobody could have predicted that except literally everyone. Try 'next game'! 💸",
+             "⚾ Not quite sure what you mean, matey! Ask me about upcoming games or volunteer roles! 🏴‍☠️",
+             "🏴‍☠️ Shiver me timbers! That's a puzzler. Try 'next game', 'I've got snacks', or 'let's go Pirates!' ⚾",
+-            "📱 Was that an iPhone typo or a secret pirate code? 🤔 Try asking about games or volunteers!",
++            "📱 Is that message from you or your iPhone's delusions of intelligence? Hard to tell. Try 'volunteers'! 🤡",
+             "⚾ Arrr, I'm not sure what ye be sayin'! Ask about the next game or volunteer to help out! 🏴‍☠️",
++            "📱 Sent from my iPhone (which explains everything). Try 'next game' - even iOS can handle that! 🙄",
++            "📱 Your iPhone just randomly typed that? Must be the 'courage' Tim Cook talked about. Try 'show volunteers'! 🎪",
++            "📱 'It just works'... at making typos! Thanks Steve! Now try 'when is the next game?' ⚾",
++            "📱 iPhone 15 Pro Max and still can't type? That's $1200 of regret right there. Try 'next game'! 💀",
++            "📱 Your iPhone's autocorrect is more confused than people who bought the $19 polishing cloth. Ask 'volunteers'? 🤦",
++            "📱 Apple removed the headphone jack AND the ability to type coherently. Brave. Try 'next game' maybe? 🎭",
++            "📱 'Think Different'? Your iPhone isn't thinking at all. Neither was your wallet apparently. Try 'volunteers'! 🤑",
++            "📱 You paid Apple prices for Android reliability. Congrats! 🎉 Now try 'show volunteers' or 'next game'!",
++            "📱 Your iPhone has the computing power of a 2010 laptop at 3x the price. And it STILL autocorrected that wrong. 'next game'? 🚀",
+         ];
+ 
+         let mut rng = thread_rng();
+@@ -400,10 +413,10 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
+     /// Generate a helpful suggestion based on partial understanding
+     pub fn get_helpful_suggestion(&self, intent: &ParsedIntent) -> String {
+         match intent {
+-            ParsedIntent::Volunteer { role, date, person, relative_game } => {
++            ParsedIntent::Volunteer { roles, date, person, relative_game } => {
+                 let mut suggestions = Vec::new();
+                 
+-                if role.is_none() {
++                if roles.is_empty() {
+                     suggestions.push("what you'd like to volunteer for (snacks, livestream, scoreboard, or pitch count)");
+                 }
+                 if date.is_none() && relative_game.is_none() {
+diff --git a/src/error.rs b/src/error.rs
+index be78608..de57fa6 100644
+--- a/src/error.rs
++++ b/src/error.rs
+@@ -23,7 +23,7 @@ pub enum BotError {
+     #[error("No event found for the specified criteria")]
+     EventNotFound,
+     
+-    #[error("Invalid command format: {0}")]
++    #[error("{0}")]
+     InvalidCommand(String),
+ }
+ 
+diff --git a/src/main.rs b/src/main.rs
+index a06e2d3..4397b30 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -28,6 +28,8 @@ struct AppState {
+ 
+ #[post("/webhook")]
+ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder {
++    // Debug: Log raw webhook payload to see what GroupMe sends
++    info!("Raw GroupMe webhook payload: {}", req_body);
+     let msg: GroupMeMessage = match serde_json::from_str(&req_body) {
+         Ok(m) => m,
+         Err(e) => {
+diff --git a/src/parser.rs b/src/parser.rs
+index 07a273d..553d56e 100644
+--- a/src/parser.rs
++++ b/src/parser.rs
+@@ -40,8 +40,8 @@ impl CommandParser {
+ 
+     fn intent_to_command(&self, intent: ParsedIntent, original_text: &str) -> Result<Option<BotCommand>> {
+         match intent {
+-            ParsedIntent::Volunteer { role, date, person, relative_game } => {
+-                self.handle_volunteer_intent(role, date, person, relative_game, original_text)
++            ParsedIntent::Volunteer { roles, date, person, relative_game } => {
++                self.handle_volunteer_intent(roles, date, person, relative_game, original_text)
+             }
+             ParsedIntent::GameQuery { category, count, relative: _ } => {
+                 self.handle_game_query_intent(category, count)
+@@ -64,13 +64,21 @@ impl CommandParser {
+ 
+     fn handle_volunteer_intent(
+         &self, 
+-        role: Option<String>, 
++        roles: Vec<String>, 
+         date: Option<NaiveDate>, 
+         person: Option<String>,
+         relative_game: Option<usize>,
+         _original_text: &str
+     ) -> Result<Option<BotCommand>> {
+-        match (role, date, person, relative_game) {
++        if roles.is_empty() {
++            return Err(BotError::InvalidCommand(
++                self.conversational_parser.get_helpful_suggestion(
++                    &ParsedIntent::Volunteer { roles: vec![], date, person: person.clone(), relative_game }
++                )
++            ));
++        }
++        let role = roles[0].clone();
++        match (Some(role), date, person, relative_game) {
+             // Explicit date provided
+             (Some(r), Some(d), Some(p), _) => {
+                 Ok(Some(BotCommand::Volunteer(d, r, p)))

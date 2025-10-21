@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              &config.google_api_key[..10], 
              &config.google_api_key[config.google_api_key.len()-4..]);
     println!("  Sheet ID: {}", config.sheet_id);
-    println!("  Calendar Webcal URL: {}\n", config.calendar_webcal_url);
+    println!("  Calendar Webcal URL: {:?}\n", config.calendar_webcal_url);
 
     // Test API key validity (only for Sheets, since we use webcal for calendar)
     println!("🔑 Testing API Key validity with Sheets API...");
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => {
             println!("❌ Calendar API access failed: {}", e);
-            print_calendar_help(&config.calendar_webcal_url);
+            if let Some(url) = &config.calendar_webcal_url { print_calendar_help(url); }
         }
     }
 
@@ -108,7 +108,7 @@ async fn test_calendar_access(config: &Config) -> Result<String, Box<dyn std::er
     let client = Client::new();
     
     // Test webcal URL access
-    let https_url = config.calendar_webcal_url.replace("webcal://", "https://");
+    let https_url = config.calendar_webcal_url.as_ref().unwrap().replace("webcal://", "https://");
     
     let response = client.get(&https_url).send().await?;
     if !response.status().is_success() {

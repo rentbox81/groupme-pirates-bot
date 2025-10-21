@@ -9,13 +9,12 @@ pub struct ConversationalParser {
 
 #[derive(Debug, Clone)]
 pub enum ParsedIntent {
-    Volunteer { roles: Vec<String>, date: Option<NaiveDate>, person: Option<String>, relative_game: Option<usize> },
+    Volunteer { role: Option<String>, date: Option<NaiveDate>, person: Option<String>, relative_game: Option<usize> },
     GameQuery { category: Option<String>, count: Option<usize>, relative: Option<String> },
     VolunteerQuery { date: Option<NaiveDate> },
     TeamSpirit,
     Help,
     Unknown,
-    ConversationalResponse { message: String },
 }
 
 impl ConversationalParser {
@@ -71,12 +70,6 @@ impl ConversationalParser {
         if self.is_help_intent(text_lower) {
             return ParsedIntent::Help;
         }
-        // Conversational message detection
-        if self.is_conversational_message(text_lower) {
-            let message = self.get_conversational_response(text_lower);
-            return ParsedIntent::ConversationalResponse { message };
-        }
-
 
         // Unknown intent
         ParsedIntent::Unknown
@@ -100,7 +93,7 @@ impl ConversationalParser {
     }
 
     fn parse_volunteer_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
-        let roles = self.extract_volunteer_roless(text_lower);
+        let role = self.extract_volunteer_role(text_lower);
         let date = self.extract_date(text_lower);
         let person = self.extract_person_name(original_text);
         let relative_game = self.extract_relative_game(text_lower);
@@ -108,10 +101,10 @@ impl ConversationalParser {
         // If no person extracted from text, use sender's name as fallback
         let person = person.or_else(|| sender_name.map(|s| s.to_string()));
 
-        ParsedIntent::Volunteer { roles, date, person, relative_game }
+        ParsedIntent::Volunteer { role, date, person, relative_game }
     }
 
-    fn extract_volunteer_roless(&self, text: &str) -> Vec<String> {
+    fn extract_volunteer_role(&self, text: &str) -> Option<String> {
         let role_mappings = [
             (vec!["snacks", "snack", "food", "treats"], "snacks"),
             (vec!["livestream", "stream", "streaming", "live"], "livestream"),
@@ -119,16 +112,13 @@ impl ConversationalParser {
             (vec!["pitchcount", "pitch count", "pitch", "pitches"], "pitchcount"),
         ];
 
-        let mut found_roles = Vec::new();
-
         for (keywords, role) in &role_mappings {
-
             if keywords.iter().any(|kw| text.contains(kw)) {
-                found_roles.push(role.to_string());
+                return Some(role.to_string());
             }
         }
 
-        found_roles
+        None
     }
 
 fn extract_person_name(&self, text: &str) -> Option<String> {
@@ -390,45 +380,17 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
         help_keywords.iter().any(|kw| text.contains(kw))
     }
 
-    fn is_conversational_message(&self, text: &str) -> bool {
-        let conversational_keywords = ["scared", "fear", "thank", "thanks", "hi", "hello", "funny", "lol"];
-        conversational_keywords.iter().any(|kw| text.contains(kw))
-    }
-
-    fn get_conversational_response(&self, text: &str) -> String {
-        if text.contains("scared") || text.contains("fear") { self.get_fear_response() }
-        else if text.contains("thank") { self.get_thanks_response() }
-        else if text.contains("funny") || text.contains("lol") { self.get_humor_response() }
-        else { self.get_generic_conversational_response() }
-    }
-
-    fn get_fear_response(&self) -> String { "🏴‍☠️ No need to fear! I'm just here to help with baseball. ⚾".to_string() }
-    fn get_humor_response(&self) -> String { "⚾ Humor setting: TARS level. 75%% honesty. 🤖".to_string() }
-    fn get_thanks_response(&self) -> String { "🏴‍☠️ You're welcome! Happy to help. ⚾".to_string() }
-    fn get_positive_response(&self) -> String { "🏴‍☠️ Thanks! I do my best. ⚾".to_string() }
-    fn get_negative_response(&self) -> String { "🏴‍☠️ Sorry! Tell me how to improve. 🔧".to_string() }
-    fn get_generic_conversational_response(&self) -> String { "🏴‍☠️ Hi! I help with schedules and volunteers. ⚾".to_string() }
-
     /// Generate a witty iPhone response
     pub fn get_witty_response(&self) -> String {
         let responses = [
             "🏴‍☠️ Ahoy! I'm not quite sure what you're asking, but I'm here to help! Try asking about the next game or volunteer to bring snacks! 🍪",
             "⚾ Hmm, that's a new one! Maybe ask me 'when's the next game?' or 'I've got snacks'? 🤔",
             "🏴‍☠️ I'm still learning pirate speak! Try asking me about games, volunteers, or say 'let's go Pirates!' 🏴‍☠️",
-            "📱 iPhone autocorrect failing you? Shocking. Nobody could have predicted that except literally everyone. Try 'next game'! 💸",
+            "📱 iPhone autocorrect strikes again? 😏 Try asking about the schedule or volunteering!",
             "⚾ Not quite sure what you mean, matey! Ask me about upcoming games or volunteer roles! 🏴‍☠️",
             "🏴‍☠️ Shiver me timbers! That's a puzzler. Try 'next game', 'I've got snacks', or 'let's go Pirates!' ⚾",
-            "📱 Is that message from you or your iPhone's delusions of intelligence? Hard to tell. Try 'volunteers'! 🤡",
+            "📱 Was that an iPhone typo or a secret pirate code? 🤔 Try asking about games or volunteers!",
             "⚾ Arrr, I'm not sure what ye be sayin'! Ask about the next game or volunteer to help out! 🏴‍☠️",
-            "📱 Sent from my iPhone (which explains everything). Try 'next game' - even iOS can handle that! 🙄",
-            "📱 Your iPhone just randomly typed that? Must be the 'courage' Tim Cook talked about. Try 'show volunteers'! 🎪",
-            "📱 'It just works'... at making typos! Thanks Steve! Now try 'when is the next game?' ⚾",
-            "📱 iPhone 15 Pro Max and still can't type? That's $1200 of regret right there. Try 'next game'! 💀",
-            "📱 Your iPhone's autocorrect is more confused than people who bought the $19 polishing cloth. Ask 'volunteers'? 🤦",
-            "📱 Apple removed the headphone jack AND the ability to type coherently. Brave. Try 'next game' maybe? 🎭",
-            "📱 'Think Different'? Your iPhone isn't thinking at all. Neither was your wallet apparently. Try 'volunteers'! 🤑",
-            "📱 You paid Apple prices for Android reliability. Congrats! 🎉 Now try 'show volunteers' or 'next game'!",
-            "📱 Your iPhone has the computing power of a 2010 laptop at 3x the price. And it STILL autocorrected that wrong. 'next game'? 🚀",
         ];
 
         let mut rng = thread_rng();
@@ -438,10 +400,10 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
     /// Generate a helpful suggestion based on partial understanding
     pub fn get_helpful_suggestion(&self, intent: &ParsedIntent) -> String {
         match intent {
-            ParsedIntent::Volunteer { roles, date, person, relative_game } => {
+            ParsedIntent::Volunteer { role, date, person, relative_game } => {
                 let mut suggestions = Vec::new();
                 
-                if roles.is_empty() {
+                if role.is_none() {
                     suggestions.push("what you'd like to volunteer for (snacks, livestream, scoreboard, or pitch count)");
                 }
                 if date.is_none() && relative_game.is_none() {
@@ -490,7 +452,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case);
             assert!(matches!(intent, Some(ParsedIntent::Volunteer { .. })));
         }
     }
@@ -507,7 +469,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case);
             assert!(matches!(intent, Some(ParsedIntent::GameQuery { .. })));
         }
     }
@@ -526,9 +488,9 @@ mod tests {
     fn test_role_extraction() {
         let parser = create_parser();
         
-        assert_eq!(parser.extract_volunteer_roless("i've got snacks"), vec!["snacks".to_string()]);
-        assert_eq!(parser.extract_volunteer_roless("livestream for me"), vec!["livestream".to_string()]);
-        assert_eq!(parser.extract_volunteer_roless("scoreboard please"), vec!["scoreboard".to_string()]);
+        assert_eq!(parser.extract_volunteer_role("i've got snacks"), Some("snacks".to_string()));
+        assert_eq!(parser.extract_volunteer_role("livestream for me"), Some("livestream".to_string()));
+        assert_eq!(parser.extract_volunteer_role("scoreboard please"), Some("scoreboard".to_string()));
     }
     
     #[test]
