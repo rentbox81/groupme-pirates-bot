@@ -11,7 +11,7 @@ pub struct Config {
     pub port: u16,
     pub reminder_start_hour: u32,
     pub reminder_end_hour: u32,
-    pub admin_user_ids: Vec<String>,
+    pub admin_user_id: String,
 }
 
 impl Config {
@@ -66,12 +66,9 @@ impl Config {
             return Err(BotError::EnvVar("REMINDER_START_HOUR must be less than REMINDER_END_HOUR".to_string()));
         }
 
-        let admin_user_ids = env::var("ADMIN_USER_IDS")
-            .unwrap_or_default()
-            .split(",")
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
+        let admin_user_id = env::var("ADMIN_USER_ID")
+            .map_err(|_| BotError::EnvVar("ADMIN_USER_ID".to_string()))?;
+
 
         Ok(Config {
             groupme_bot_id,
@@ -82,7 +79,7 @@ impl Config {
             port,
             reminder_start_hour,
             reminder_end_hour,
-            admin_user_ids,
+            admin_user_id,
         })
     }
 }

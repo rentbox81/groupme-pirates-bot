@@ -9,6 +9,7 @@ pub mod parser;
 pub mod conversational_parser;
 pub mod reminder;
 pub mod conversation_context;
+pub mod moderators;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use tracing::{info, error, warn};
@@ -25,6 +26,8 @@ use crate::reminder::ReminderScheduler;
 struct AppState {
     bot_service: BotService,
     command_parser: CommandParser,
+    moderators_store: moderators::ModeratorsStore,
+    config: config::Config,
 }
 
 #[post("/webhook")]
@@ -130,6 +133,8 @@ async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState {
         bot_service,
         command_parser,
+        moderators_store: moderators::ModeratorsStore::new(),
+        config: config.clone(),
     });
 
     // Start HTTP server

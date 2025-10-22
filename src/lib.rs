@@ -9,3 +9,4 @@ pub mod parser;
 pub mod conversational_parser;
 pub mod reminder;
 pub mod conversation_context;
+pub mod moderators;
