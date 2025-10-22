@@ -169,7 +169,10 @@ impl CommandParser {
         if high_confidence_verbs.iter().any(|v| text_lower.contains(v)) { confidence += 40; }
         
         let medium_confidence = ["will do", "can do", "doing", "bringing"];
-        if medium_confidence.iter().any(|v| text_lower.contains(v)) { confidence += 20; }
+        if medium_confidence.iter().any(|v| text_lower.contains(v)) { 
+            if has_context && text.chars().any(|c| c.is_uppercase()) { confidence += 40; } 
+            else { confidence += 20; } 
+        }
         
         let question_words = ["who", "what", "when", "where", "?"];
         if question_words.iter().any(|q| text_lower.contains(q)) { confidence = confidence.saturating_sub(30); }
