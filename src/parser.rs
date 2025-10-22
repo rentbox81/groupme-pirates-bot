@@ -75,6 +75,18 @@ impl CommandParser {
                 Ok(Some(BotCommand::Commands))
             }
             ParsedIntent::ConversationalResponse { message } => {
+            ParsedIntent::RemoveVolunteer { person, role, date } => {
+                Ok(Some(BotCommand::RemoveVolunteer(person, role, date)))
+            },
+            ParsedIntent::AssignVolunteer { person, role, date } => {
+                Ok(Some(BotCommand::AssignVolunteer(person, role, date)))
+            },
+            ParsedIntent::AddModerator { user_id } => {
+                Ok(Some(BotCommand::AddModerator(user_id)))
+            },
+            ParsedIntent::ListModerators => {
+                Ok(Some(BotCommand::ListModerators))
+            },
                 Err(BotError::InvalidCommand(message))
             },
             ParsedIntent::Unknown => {

@@ -15,6 +15,10 @@ pub enum ParsedIntent {
     TeamSpirit,
     Help,
     Unknown,
+    RemoveVolunteer { person: String, role: String, date: Option<NaiveDate> },
+    AssignVolunteer { person: String, role: String, date: Option<NaiveDate> },
+    AddModerator { user_id: String },
+    ListModerators,
     ConversationalResponse { message: String },
 }
 
@@ -48,6 +52,20 @@ impl ConversationalParser {
 
     fn detect_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
         // Volunteer intent detection
+        // Admin command detection (check first, before volunteer)
+        if text_lower.contains("remove") && text_lower.contains("from") {
+            return self.parse_remove_volunteer(text_lower);
+        }
+        if text_lower.contains("assign") && text_lower.contains("to") {
+            return self.parse_assign_volunteer(text_lower);
+        }
+        if text_lower.contains("add moderator") || text_lower.contains("add mod") {
+            return self.parse_add_moderator(text_lower);
+        }
+        if text_lower.contains("list moderator") || text_lower.contains("show moderator") {
+            return ParsedIntent::ListModerators;
+        }
+
         if self.is_volunteer_intent(text_lower) {
             return self.parse_volunteer_intent(text_lower, original_text, sender_name);
         }
@@ -468,9 +486,40 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
             _ => "🏴‍☠️ Let me show you what I can help with!".to_string()
         }
     }
+
+    fn parse_remove_volunteer(&self, text: &str) -> ParsedIntent {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut person = String::new();
+        let mut role = String::new();
+        
+        if let Some(from_idx) = words.iter().position(|&w| w == "from") {
+            if from_idx > 1 { person = words[1..from_idx].join(" "); }
+            if from_idx + 1 < words.len() { role = words[from_idx + 1].to_string(); }
+        }
+        
+        ParsedIntent::RemoveVolunteer { person, role, date: None }
+    }
+
+    fn parse_assign_volunteer(&self, text: &str) -> ParsedIntent {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let mut person = String::new();
+        let mut role = String::new();
+        
+        if let Some(to_idx) = words.iter().position(|&w| w == "to") {
+            if to_idx > 1 { person = words[1..to_idx].join(" "); }
+            if to_idx + 1 < words.len() { role = words[to_idx + 1].to_string(); }
+        }
+        
+        ParsedIntent::AssignVolunteer { person, role, date: None }
+    }
+
+    fn parse_add_moderator(&self, text: &str) -> ParsedIntent {
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let user_id = words.last().unwrap_or(&"").to_string();
+        ParsedIntent::AddModerator { user_id }
+    }
 }
 
-#[cfg(test)]
 mod tests {
     use super::*;
 
