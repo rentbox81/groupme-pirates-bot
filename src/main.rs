@@ -68,7 +68,7 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
     };
 
     // Handle the command
-    match data.bot_service.handle_command(command, Some(&msg.name)).await {
+    match data.bot_service.handle_command(command, Some(&msg.name), Some(&msg.user_id), &data.moderators_store).await {
         Ok(response) => {
             if let Err(e) = data.bot_service.send_response(&response).await {
                 error!("Failed to send response: {}", e);

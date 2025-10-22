@@ -73,8 +73,10 @@ impl CommandParser {
             }
             ParsedIntent::Help => {
                 Ok(Some(BotCommand::Commands))
-            }
+            },
             ParsedIntent::ConversationalResponse { message } => {
+                Err(BotError::InvalidCommand(message))
+            },
             ParsedIntent::RemoveVolunteer { person, role, date } => {
                 Ok(Some(BotCommand::RemoveVolunteer(person, role, date)))
             },

@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use tracing::{info, warn};
 
 use crate::config::Config;
-use crate::error::Result;
+use crate::error::{Result, BotError};
 use crate::google_client::GoogleClient;
 use crate::groupme_client::GroupMeClient;
 use crate::models::{CorrelatedEvent, EventData, BotCommand};
@@ -171,7 +171,7 @@ impl BotService {
         Ok(events.get(&query_date).cloned())
     }
 
-    pub async fn handle_command(&self, command: BotCommand, sender_name: Option<&str>) -> Result<String> {
+    pub async fn handle_command(&self, command: BotCommand, sender_name: Option<&str>, user_id: Option<&str>, moderators_store: &crate::moderators::ModeratorsStore) -> Result<String> {
         match command {
             BotCommand::NextGame => {
                 // @bot next game
@@ -305,6 +305,36 @@ impl BotService {
                     self.config.groupme_bot_name
                 ))
             }
+            BotCommand::RemoveVolunteer(person, role, date) => {
+                let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
+                if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
+                    return Err(BotError::InvalidCommand("🏴‍☠️ Only admins and moderators can remove volunteers".to_string()));
+                }
+                Ok(format!("🏴‍☠️ Removed {} from {} (date: {:?}) - Feature coming soon!", person, role, date))
+            },
+            BotCommand::AssignVolunteer(person, role, date) => {
+                let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
+                if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
+                    return Err(BotError::InvalidCommand("🏴‍☠️ Only admins and moderators can assign volunteers".to_string()));
+                }
+                Ok(format!("🏴‍☠️ Assigned {} to {} (date: {:?}) - Feature coming soon!", person, role, date))
+            },
+            BotCommand::AddModerator(new_mod_id) => {
+                let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
+                if !moderators_store.is_admin(user, &self.config.admin_user_id) {
+                    return Err(BotError::InvalidCommand("🏴‍☠️ Only the admin can add moderators".to_string()));
+                }
+                moderators_store.add_moderator(new_mod_id.clone()).await;
+                Ok(format!("🏴‍☠️ Added moderator: {}", new_mod_id))
+            },
+            BotCommand::ListModerators => {
+                let mods = moderators_store.list_moderators().await;
+                if mods.is_empty() {
+                    Ok(format!("🏴‍☠️ No moderators assigned\nAdmin: {}", self.config.admin_user_id))
+                } else {
+                    Ok(format!("🏴‍☠️ Moderators:\n{}\n\nAdmin: {}", mods.join("\n"), self.config.admin_user_id))
+                }
+            },
         }
     }
 
