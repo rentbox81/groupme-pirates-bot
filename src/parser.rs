@@ -141,6 +141,28 @@ impl CommandParser {
             }
         }
     }
+
+    fn calculate_volunteer_confidence(&self, text: &str, has_context: bool, mentioned_bot: bool) -> u32 {
+        let text_lower = text.to_lowercase();
+        let mut confidence = 0u32;
+        
+        if mentioned_bot { confidence += 50; }
+        if has_context { confidence += 30; }
+        
+        let high_confidence_verbs = ["i'll do", "i've got", "i can do", "i'll bring", "put me down", "sign me up", "i got", "i will do"];
+        if high_confidence_verbs.iter().any(|v| text_lower.contains(v)) { confidence += 40; }
+        
+        let medium_confidence = ["will do", "can do", "doing", "bringing"];
+        if medium_confidence.iter().any(|v| text_lower.contains(v)) { confidence += 20; }
+        
+        let question_words = ["who", "what", "when", "where", "?"];
+        if question_words.iter().any(|q| text_lower.contains(q)) { confidence = confidence.saturating_sub(30); }
+        
+        let negative_words = ["can't", "won't", "not doing", "unable"];
+        if negative_words.iter().any(|n| text_lower.contains(n)) { confidence = 0; }
+        
+        confidence
+    }
 }
 
 #[cfg(test)]
