@@ -35,12 +35,24 @@ pub struct CorrelatedEvent {
     pub data: EventData,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct Attachment {
+    #[serde(rename = "type")]
+    pub attachment_type: String,
+    #[serde(default)]
+    pub user_ids: Vec<String>,
+    #[serde(default)]
+    pub loci: Vec<Vec<i32>>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GroupMeMessage {
     pub text: String,
     pub sender_type: String,
     pub name: String,
     pub user_id: String,
+    #[serde(default)]
+    pub attachments: Vec<Attachment>,
 }
 
 #[derive(Debug, Serialize)]
@@ -68,6 +80,7 @@ pub enum BotCommand {
     RemoveVolunteer(String, String, Option<NaiveDate>), // person, role, date
     AssignVolunteer(String, String, Option<NaiveDate>), // person, role, date
     AddModerator(String), // user_id
+    RemoveModerator(String), // user_id
     ListModerators,
 }
 

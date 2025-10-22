@@ -23,7 +23,7 @@ impl CommandParser {
         }
     }
 
-    pub async fn parse_message(&self, text: &str, sender_name: Option<&str>, user_id: Option<&str>) -> Result<Option<BotCommand>> {
+    pub async fn parse_message(&self, text: &str, sender_name: Option<&str>, user_id: Option<&str>, attachments: &[crate::models::Attachment]) -> Result<Option<BotCommand>> {
         let text = text.trim();
         let mentioned_bot = text.to_lowercase().contains(&format!("@{}", self.bot_name).to_lowercase());
         let active_context = if let Some(uid) = user_id { self.context_store.get_active_context(uid).await } else { None };
@@ -35,8 +35,9 @@ impl CommandParser {
         
         if !should_process {
             return Ok(None);
+        }
 
-        if let Some(intent) = self.conversational_parser.parse_message(text, sender_name) {
+        if let Some(intent) = self.conversational_parser.parse_message(text, sender_name, attachments) {
             let is_volunteer_intent = matches!(intent, ParsedIntent::Volunteer { .. });
             
             if mentioned_bot && is_volunteer_intent {
@@ -50,7 +51,6 @@ impl CommandParser {
             }
             
             return self.intent_to_command(intent, text);
-        }
         }
 
         // If no intent detected, shouldn't happen but return None
@@ -86,10 +86,11 @@ impl CommandParser {
             ParsedIntent::AddModerator { user_id } => {
                 Ok(Some(BotCommand::AddModerator(user_id)))
             },
+            ParsedIntent::RemoveModerator { user_id } => {
+                Ok(Some(BotCommand::RemoveModerator(user_id)))
+            },
             ParsedIntent::ListModerators => {
                 Ok(Some(BotCommand::ListModerators))
-            },
-                Err(BotError::InvalidCommand(message))
             },
             ParsedIntent::Unknown => {
                 // Return a witty response instead of an error
@@ -211,7 +212,7 @@ mod tests {
         let parser = create_parser();
         
         // These should be understood conversationally
-        let result = parser.parse_message("@TestBot I've got snacks for Saturday John", None, None).await;
+        let result = parser.parse_message("@TestBot I've got snacks for Saturday John", None, None, &[]).await;
         assert!(result.is_ok());
     }
 
@@ -219,7 +220,7 @@ mod tests {
     fn test_conversational_game_query() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot when's the next game?", None, None).await;
+        let result = parser.parse_message("@TestBot when's the next game?", None, None, &[]).await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::NextGame)));
     }
@@ -228,7 +229,7 @@ mod tests {
     fn test_unknown_intent_returns_friendly_message() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot blah blah random stuff", None, None).await;
+        let result = parser.parse_message("@TestBot blah blah random stuff", None, None, &[]).await;
         // Should return an error with a friendly message, not panic
         assert!(result.is_err());
         if let Err(BotError::InvalidCommand(msg)) = result {
@@ -243,7 +244,7 @@ mod tests {
     fn test_help_intent() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot help", None, None).await;
+        let result = parser.parse_message("@TestBot help", None, None, &[]).await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::Commands)));
     }
@@ -252,16 +253,16 @@ mod tests {
     fn test_team_spirit() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot let's go pirates!", None, None).await;
+        let result = parser.parse_message("@TestBot let's go pirates!", None, None, &[]).await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::LetsGo(_))));
     }
 
-    #[test]
+    #[tokio::test]
     fn test_volunteer_next_game() {
         let parser = create_parser();
         
-        let result = parser.parse_message("@TestBot Hobbs have snacks for the next game", None, None).await;
+        let result = parser.parse_message("@TestBot Hobbs have snacks for the next game", None, None, &[]).await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::VolunteerNextGame(_, _))));
     }
@@ -271,7 +272,7 @@ mod tests {
         let parser = create_parser();
         
         // No date specified - should default to next game
-        let result = parser.parse_message("@TestBot Hobbs have snacks", None, None).await;
+        let result = parser.parse_message("@TestBot Hobbs have snacks", None, None, &[]).await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), Some(BotCommand::VolunteerNextGame(_, _))));
     }

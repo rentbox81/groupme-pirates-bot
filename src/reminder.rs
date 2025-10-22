@@ -79,6 +79,8 @@ impl ReminderScheduler {
                 let game_datetime = self.parse_game_datetime(&event.event_date, &event.data.time)?;
                 
                 let time_until_game = game_datetime.signed_duration_since(now);
+                info!("Game datetime parsed: {} (date: {}, time: {}), Current time: {}, Minutes until game: {}", 
+                    game_datetime, event.event_date, event.data.time, now, time_until_game.num_minutes());
                 
                 // Check for 24-hour reminder
                 if time_until_game.num_hours() <= 24 && time_until_game.num_hours() > 23 {

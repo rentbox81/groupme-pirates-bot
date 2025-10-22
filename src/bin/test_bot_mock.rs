@@ -41,7 +41,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
 
         // Parse the command
-        match command_parser.parse_message(input, None, None).await {
+        match command_parser.parse_message(input, None, None, &[]).await {
             Ok(Some(command)) => {
                 println!("📝 Parsed command: {:?}", command);
                 
@@ -140,6 +140,21 @@ fn handle_command_mock(command: BotCommand, bot_name: &str) -> String {
             } else {
                 "🏴‍☠️ Volunteer status for upcoming events:\n\n\
                  2024-01-15 (Mock Game):\n⚠️ Still needed: snacks, scoreboard\n\n\
+        BotCommand::RemoveVolunteer(person, role, date) => {
+            format!("✅ {} has been removed from {} for {} (Mock)!", person, role, date)
+        }
+        BotCommand::AssignVolunteer(person, role, date) => {
+            format!("✅ {} has been assigned to {} for {} by admin (Mock)!", person, role, date)
+        }
+        BotCommand::AddModerator(user_id) => {
+        BotCommand::RemoveModerator(user_id) => {
+            format!("✅ Removed moderator: {} (Mock)!", user_id)
+        }
+            format!("✅ Added moderator: {} (Mock)!", user_id)
+        }
+        BotCommand::ListModerators => {
+            "🏴‍☠️ Moderators (Mock):\n- user123\n- user456\n\nAdmin: admin_user".to_string()
+        }
                  2024-01-22 (Mock Game):\n⚠️ Still needed: livestream, pitchcount".to_string()
             }
         }

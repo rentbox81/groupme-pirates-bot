@@ -327,6 +327,7 @@ impl BotService {
                 moderators_store.add_moderator(new_mod_id.clone()).await;
                 Ok(format!("🏴‍☠️ Added moderator: {}", new_mod_id))
             },
+            BotCommand::RemoveModerator(mod_id) => { let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?; if !moderators_store.is_admin(user, &self.config.admin_user_id) { return Err(BotError::InvalidCommand("🏴‍☠️ Only the admin can remove moderators".to_string())); } let removed = moderators_store.remove_moderator(&mod_id).await; if removed { Ok(format!("🏴‍☠️ Removed moderator: {}", mod_id)) } else { Ok(format!("🏴‍☠️ {} was not a moderator", mod_id)) } },
             BotCommand::ListModerators => {
                 let mods = moderators_store.list_moderators().await;
                 if mods.is_empty() {

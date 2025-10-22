@@ -1,4 +1,7 @@
 pub mod config;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::Layer;
 pub mod auth;
 pub mod error;
 pub mod models;
@@ -50,7 +53,7 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
     info!("Received message from {}: '{}'", msg.name, msg.text);
 
     // Parse the command
-    let command = match data.command_parser.parse_message(&msg.text, Some(&msg.name), Some(&msg.user_id)).await {
+    let command = match data.command_parser.parse_message(&msg.text, Some(&msg.name), Some(&msg.user_id), &msg.attachments).await {
         Ok(Some(cmd)) => cmd,
         Ok(None) => {
             // Message not directed at bot, ignore
@@ -101,9 +104,20 @@ async fn main() -> std::io::Result<()> {
     // Load environment variables
     dotenvy::dotenv().ok();
 
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+    let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "groupme-bot.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+    
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(non_blocking)
+        .with_filter(tracing_subscriber::filter::LevelFilter::ERROR);
+    
+    let console_layer = tracing_subscriber::fmt::layer()
+        .with_filter(tracing_subscriber::EnvFilter::from_default_env());
+    
+    let _guard = guard; // Keep guard alive for the lifetime of the program
+    tracing_subscriber::registry()
+        .with(console_layer)
+        .with(file_layer)
         .init();
 
     // Load configuration

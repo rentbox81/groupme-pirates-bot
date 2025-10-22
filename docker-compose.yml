@@ -4,6 +4,9 @@ services:
     build: .
     env_file:
       - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
     restart: unless-stopped
     ports:
       - "18080:18080"  # Port mapping for direct access (from override file)

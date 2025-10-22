@@ -18,6 +18,7 @@ pub enum ParsedIntent {
     RemoveVolunteer { person: String, role: String, date: Option<NaiveDate> },
     AssignVolunteer { person: String, role: String, date: Option<NaiveDate> },
     AddModerator { user_id: String },
+    RemoveModerator { user_id: String },
     ListModerators,
     ConversationalResponse { message: String },
 }
@@ -28,7 +29,7 @@ impl ConversationalParser {
     }
 
     /// Parse a message and extract intent
-    pub fn parse_message(&self, text: &str, sender_name: Option<&str>) -> Option<ParsedIntent> {
+    pub fn parse_message(&self, text: &str, sender_name: Option<&str>, attachments: &[crate::models::Attachment]) -> Option<ParsedIntent> {
         let text = text.trim();
         let text_lower = text.to_lowercase();
         
@@ -46,11 +47,11 @@ impl ConversationalParser {
         }
 
         // Detect intent based on keywords and patterns
-        let intent = self.detect_intent(&cleaned_text, text, sender_name);
+        let intent = self.detect_intent(&cleaned_text, text, sender_name, attachments);
         Some(intent)
     }
 
-    fn detect_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>) -> ParsedIntent {
+    fn detect_intent(&self, text_lower: &str, original_text: &str, sender_name: Option<&str>, attachments: &[crate::models::Attachment]) -> ParsedIntent {
         // Volunteer intent detection
         // Admin command detection (check first, before volunteer)
         if text_lower.contains("remove") && text_lower.contains("from") {
@@ -60,7 +61,10 @@ impl ConversationalParser {
             return self.parse_assign_volunteer(text_lower);
         }
         if text_lower.contains("add moderator") || text_lower.contains("add mod") {
-            return self.parse_add_moderator(text_lower);
+            return self.parse_add_moderator(text_lower, attachments);
+        }
+        if text_lower.contains("remove moderator") || text_lower.contains("remove mod") {
+            return self.parse_remove_moderator(text_lower, attachments);
         }
         if text_lower.contains("list moderator") || text_lower.contains("show moderator") {
             return ParsedIntent::ListModerators;
@@ -513,10 +517,23 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
         ParsedIntent::AssignVolunteer { person, role, date: None }
     }
 
-    fn parse_add_moderator(&self, text: &str) -> ParsedIntent {
-        let words: Vec<&str> = text.split_whitespace().collect();
-        let user_id = words.last().unwrap_or(&"").to_string();
+    fn parse_add_moderator(&self, text: &str, attachments: &[crate::models::Attachment]) -> ParsedIntent {
+        let user_id = attachments
+            .iter()
+            .find(|a| a.attachment_type == "mentions")
+            .and_then(|a| a.user_ids.first())
+            .map(|id| id.clone())
+            .unwrap_or_else(|| text.split_whitespace().last().unwrap_or("").to_string());
         ParsedIntent::AddModerator { user_id }
+    }
+    fn parse_remove_moderator(&self, text: &str, attachments: &[crate::models::Attachment]) -> ParsedIntent {
+        let user_id = attachments
+            .iter()
+            .find(|a| a.attachment_type == "mentions")
+            .and_then(|a| a.user_ids.first())
+            .map(|id| id.clone())
+            .unwrap_or_else(|| text.split_whitespace().last().unwrap_or("").to_string());
+        ParsedIntent::RemoveModerator { user_id }
     }
 }
 

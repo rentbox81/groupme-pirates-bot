@@ -1,4 +1,5 @@
 use groupme_bot::{config::Config, service::BotService, parser::CommandParser};
+use groupme_bot::moderators::ModeratorsStore;
 use std::io::{self, Write};
 use tracing::{info, error};
 
@@ -27,6 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create services
+    let moderators_store = ModeratorsStore::new();
     let bot_service = BotService::new(config.clone());
     let command_parser = CommandParser::new(config.groupme_bot_name.clone());
 
@@ -53,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Parse the command
-        match command_parser.parse_message(input, None, None).await {
+        match command_parser.parse_message(input, None, None, &[]).await {
             Ok(Some(command)) => {
                 println!("📝 Parsed command: {:?}", command);
                 
