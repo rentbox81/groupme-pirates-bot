@@ -1,4 +1,5 @@
 use chrono::NaiveDate;
+use crate::conversation_context::ConversationContextStore;
 use crate::error::{BotError, Result};
 use crate::models::BotCommand;
 use crate::conversational_parser::{ConversationalParser, ParsedIntent};
@@ -7,6 +8,7 @@ use std::sync::{Arc, Mutex};
 pub struct CommandParser {
     bot_name: String,
     failed_attempts: Arc<Mutex<u32>>,
+    context_store: ConversationContextStore,
     conversational_parser: ConversationalParser,
 }
 
@@ -17,6 +19,7 @@ impl CommandParser {
             bot_name,
             failed_attempts: Arc::new(Mutex::new(0)),
             conversational_parser,
+            context_store: ConversationContextStore::new(3),
         }
     }
 

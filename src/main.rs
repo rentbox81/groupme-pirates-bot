@@ -8,6 +8,7 @@ pub mod service;
 pub mod parser;
 pub mod conversational_parser;
 pub mod reminder;
+pub mod conversation_context;
 
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use tracing::{info, error, warn};

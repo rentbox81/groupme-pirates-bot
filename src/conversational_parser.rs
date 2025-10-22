@@ -91,7 +91,7 @@ impl ConversationalParser {
             "have got", "has got", "will bring", "will do"
         ];
         
-        let role_keywords = ["snacks", "snack", "livestream", "stream", "scoreboard", "score", "pitchcount", "pitch count"];
+        let role_keywords = ["snacks", "snack", "livestream", "stream", "scoreboard", "score", "pitchcount", "pitch count", "gamechanger", "game changer"];
         
         let has_volunteer_keyword = volunteer_keywords.iter().any(|kw| text.contains(kw));
         let has_role_keyword = role_keywords.iter().any(|kw| text.contains(kw));
@@ -115,7 +115,7 @@ impl ConversationalParser {
         let role_mappings = [
             (vec!["snacks", "snack", "food", "treats"], "snacks"),
             (vec!["livestream", "stream", "streaming", "live"], "livestream"),
-            (vec!["scoreboard", "score", "scoring"], "scoreboard"),
+            (vec!["scoreboard", "score", "scoring", "gamechanger", "game changer"], "scoreboard"),
             (vec!["pitchcount", "pitch count", "pitch", "pitches"], "pitchcount"),
         ];
 
