@@ -41,7 +41,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
 
         // Parse the command
-        match command_parser.parse_message(input, None) {
+        match command_parser.parse_message(input, None, None).await {
             Ok(Some(command)) => {
                 println!("📝 Parsed command: {:?}", command);
                 

@@ -47,7 +47,7 @@ async fn webhook(req_body: String, data: web::Data<AppState>) -> impl Responder 
     info!("Received message from {}: '{}'", msg.name, msg.text);
 
     // Parse the command
-    let command = match data.command_parser.parse_message(&msg.text, Some(&msg.name)) {
+    let command = match data.command_parser.parse_message(&msg.text, Some(&msg.name), Some(&msg.user_id)).await {
         Ok(Some(cmd)) => cmd,
         Ok(None) => {
             // Message not directed at bot, ignore

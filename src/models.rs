@@ -40,6 +40,7 @@ pub struct GroupMeMessage {
     pub text: String,
     pub sender_type: String,
     pub name: String,
+    pub user_id: String,
 }
 
 #[derive(Debug, Serialize)]
