@@ -47,6 +47,7 @@ COPY service-account.json ./service-account.json
 RUN useradd -r -s /bin/false appuser
 RUN chown appuser:appuser /app/groupme-bot
 RUN chown appuser:appuser /app/service-account.json
+RUN mkdir -p /app/data && chown appuser:appuser /app/data
 
 # Switch to non-root user
 USER appuser

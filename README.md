@@ -4,6 +4,12 @@ A Rust-based GroupMe bot that integrates with Google Sheets and Google Calendar 
 
 ## Features
 
+### 🔐 Admin & Moderator System
+- **@Mention Support**: `@PirateBot add moderator @UserName` - Uses GroupMe mentions to identify users
+- **Role Management**: Admin can add/remove moderators, moderators can assign/remove volunteers
+- **Persistent Storage**: Moderator list saved to `data/moderators.json` and survives restarts
+- **Authorization**: Protected commands require admin or moderator permissions
+
 - 🤖 **Conversational Interface**: Talk naturally to the bot - no strict commands needed!
 - 📊 **Google Sheets API**: Fetches team data and schedules  
 - 📅 **Calendar Integration**: Shows upcoming games and events
@@ -33,6 +39,15 @@ The bot now understands natural language! You don't need to remember exact comma
 - `@PirateBot volunteers for Saturday` - Check specific date
 
 ### Team Spirit
+
+### Admin Commands (Admin Only)
+- `@PirateBot add moderator @UserName` - Add a moderator using @mention
+- `@PirateBot remove moderator @UserName` - Remove a moderator
+- `@PirateBot list moderators` - Show all moderators and admin
+
+### Moderator Commands (Admin + Moderators)
+- `@PirateBot assign @UserName to snacks` - Assign volunteer
+- `@PirateBot remove @UserName from livestream` - Remove volunteer assignment
 - `@PirateBot let's go pirates!` - Get a Pirates fact
 - `@PirateBot go pirates!` - Team motivation
 
@@ -115,6 +130,12 @@ cargo test
 - **Security**: Rate limiting, HTTPS, security headers
 
 ## What's New
+
+### v0.2.1 - Moderator Persistence
+- 💾 Moderator list persists across bot restarts
+- 📂 Automatic data directory creation
+- 🔄 Load moderators from data/moderators.json on startup
+- ✅ Add/remove moderators saved immediately
 
 ### v0.2.0 - Conversational AI
 - 🎯 Natural language understanding
