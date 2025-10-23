@@ -1,6 +1,8 @@
-# GroupMe Pirates Bot 🏴‍☠️
+# GroupMe Team Bot ⚾
 
-A Rust-based GroupMe bot that integrates with Google Sheets and Google Calendar to provide team scheduling and management for the Pirates team. **Now with conversational AI!**
+A Rust-based GroupMe bot that integrates with Google Sheets and Google Calendar to provide team scheduling and management. **Now with conversational AI and full team customization!**
+
+> **Supports any team!** Built-in facts for Pirates, Yankees, Red Sox, Cubs, Dodgers, Giants, Braves, and more. Easy customization for youth leagues and custom teams.
 
 ## Features
 
@@ -126,13 +128,47 @@ All environment variables are documented in [.env.template](./.env.template). Ke
 - **`CALENDAR_WEBCAL_URL`** - Team calendar WebCal URL
 - **`ADMIN_USER_ID`** - GroupMe user ID of the bot administrator
 
+### Team Customization
+
+Make the bot yours! Customize team name, emoji, and facts:
+
+- **`TEAM_NAME`** - Your team's name (default: "Team")
+  - Examples: `Pirates`, `Dragons`, `Eagles`, `Cubs`, `Yankees`
+  - Used in messages, help text, and team spirit commands
+
+- **`TEAM_EMOJI`** - Team emoji used throughout messages (default: ⚾)
+  - Examples: 🏴‍☠️ (Pirates), 🐉 (Dragons), 🦅 (Eagles), 🐻 (Cubs)
+  - Appears in game announcements, volunteer status, and more
+
+- **`ENABLE_TEAM_FACTS`** - Enable team facts feature (default: true)
+  - Set to `false` to disable "lets go [team]" facts
+  
+- **`TEAM_FACTS_FILE`** - Path to custom facts JSON (optional)
+  - Provide your own team facts (see `team-facts.example.json`)
+  - If not specified, uses built-in facts for supported MLB teams
+
+**Built-in Team Facts:**
+- 🏴‍☠️ Pirates, 🐛 Yankees, 🧦 Red Sox, 🐻 Cubs
+- 💙 Dodgers, 🧡 Giants, 🪓 Braves
+- Custom teams get generic encouraging messages
+
+**Custom Facts Example:**
+```json
+{
+  "team_name": "Dragons",
+  "facts": [
+    "🐉 The Dragons won their first championship in 2020!",
+    "⚾ Our mascot Spike has been with us since 2015!"
+  ]
+}
+```
+
 ### Optional Environment Variables
 
 - **`PORT`** - Server port (default: 18080)
 - **`RUST_LOG`** - Logging level: info, debug, trace (default: info)
 - **`REMINDER_START_HOUR`** - Start sending reminders (default: 9, 24-hour format)
 - **`REMINDER_END_HOUR`** - Stop sending reminders (default: 21, 24-hour format)
-- **`TEAM_NAME`** - For subdomain (e.g., pirates → piratesbot.yourdomain.com)
 - **`BASE_DOMAIN`** - Your domain for external access
 
 See [.env.template](./.env.template) for complete documentation of all variables.
@@ -177,6 +213,14 @@ cargo test
 - **Security**: Rate limiting, HTTPS, security headers
 
 ## What's New
+
+### v0.3.0 - Team Customization
+- 🎉 **Universal team support** - Works for ANY team, not just Pirates!
+- 🏴‍☠️ **Custom team emoji** - Choose your team's emoji for all messages
+- 📝 **Built-in MLB facts** - 7 major league teams have curated facts
+- 📚 **Custom facts** - Add your own team facts via JSON file
+- ⚙️ **Configurable** - Team name, emoji, and facts all customizable
+- 🔘 **Graceful fallback** - Generic encouraging messages for any team
 
 ### v0.2.1 - Moderator Persistence
 - 💾 Moderator list persists across bot restarts

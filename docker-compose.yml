@@ -37,26 +37,26 @@ services:
       - "traefik.docker.network=traefik"
       
       # HTTP router configuration (HTTPS)
-      - "traefik.http.routers.${TEAM_NAME}bot.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
-      - "traefik.http.routers.${TEAM_NAME}bot.entrypoints=websecure"
-      - "traefik.http.routers.${TEAM_NAME}bot.tls.certresolver=${CERT_RESOLVER}"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.rule=Host(`${BOT_SUBDOMAIN}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.entrypoints=websecure"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.tls.certresolver=${CERT_RESOLVER}"
       
       # HTTP redirect (from prod file)
-      - "traefik.http.routers.${TEAM_NAME}bot-http.rule=Host(`${TEAM_NAME}bot.${BASE_DOMAIN}`)"
-      - "traefik.http.routers.${TEAM_NAME}bot-http.entrypoints=web"
-      - "traefik.http.routers.${TEAM_NAME}bot-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.rule=Host(`${BOT_SUBDOMAIN}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.entrypoints=web"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       
       # Security headers and rate limiting
-      - "traefik.http.routers.${TEAM_NAME}bot.middlewares=security-headers,${TEAM_NAME}bot-ratelimit"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.middlewares=security-headers,${BOT_SUBDOMAIN}bot-ratelimit"
       - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
       - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Robots-Tag=noindex"
-      - "traefik.http.middlewares.${TEAM_NAME}bot-ratelimit.ratelimit.burst=100"
-      - "traefik.http.middlewares.${TEAM_NAME}bot-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.${BOT_SUBDOMAIN}bot-ratelimit.ratelimit.burst=100"
+      - "traefik.http.middlewares.${BOT_SUBDOMAIN}bot-ratelimit.ratelimit.average=50"
       
       # Service configuration
-      - "traefik.http.services.${TEAM_NAME}bot.loadbalancer.server.port=18080"
+      - "traefik.http.services.${BOT_SUBDOMAIN}bot.loadbalancer.server.port=18080"
 
 networks:
   traefik:

@@ -8,6 +8,7 @@ use crate::error::{Result, BotError};
 use crate::google_client::GoogleClient;
 use crate::groupme_client::GroupMeClient;
 use crate::models::{CorrelatedEvent, EventData, BotCommand};
+use crate::team_facts::TeamFactsProvider;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
@@ -16,6 +17,7 @@ pub struct BotService {
     google_client: GoogleClient,
     groupme_client: GroupMeClient,
     config: Config,
+    team_facts: Arc<TeamFactsProvider>,
     // Cache for event data to reduce API calls and enable volunteer modifications
     event_cache: Arc<RwLock<HashMap<NaiveDate, CorrelatedEvent>>>,
 }
@@ -25,10 +27,19 @@ impl BotService {
         let google_client = GoogleClient::new(config.clone());
         let groupme_client = GroupMeClient::new(config.clone());
         
+        // Initialize team facts provider
+        let team_facts = Arc::new(TeamFactsProvider::new(
+            config.team_name.clone(),
+            config.team_emoji.clone(),
+            config.enable_team_facts,
+            config.team_facts_file.clone(),
+        ));
+        
         Self {
             google_client,
             groupme_client,
             config,
+            team_facts,
             event_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -177,8 +188,8 @@ impl BotService {
                 // @bot next game
                 match self.find_next_event().await? {
                     Some(event) => {
-                        let mut response = format!("🏴‍☠️ Next Game: {}
-", event.event_summary);
+                        let mut response = format!("{} Next Game: {}
+", self.config.team_emoji, event.event_summary);
                         response.push_str(&event.data.format_all());
                         Ok(response)
                     }
@@ -201,9 +212,9 @@ impl BotService {
                     return Ok("⚾ No upcoming games found.".to_string());
                 }
                 
-                let mut response = format!("🏴‍☠️ Next {} Games:
+                let mut response = format!("{} Next {} Games:
 
-", count.min(upcoming_events.len()));
+", self.config.team_emoji, count.min(upcoming_events.len()));
                 
                 for (date, event) in upcoming_events.iter().take(count) {
                     response.push_str(&format!("📅 {} - {}
@@ -241,9 +252,9 @@ impl BotService {
                 }
             }
             
-            BotCommand::LetsGo(team) => {
-                // @bot lets go pirates
-                Ok(PiratesFacts::get_team_fact(&team))
+            BotCommand::LetsGo(_team) => {
+                // @bot lets go [team]
+                Ok(self.team_facts.get_fact())
             }
             
             BotCommand::Volunteer(date, role, person) => {
@@ -265,11 +276,17 @@ impl BotService {
             }
             
             BotCommand::Commands => {
+                let team_spirit_text = if self.config.enable_team_facts {
+                    format!("Get a {} fact!", self.config.team_name)
+                } else {
+                    "Show team spirit!".to_string()
+                };
+                
                 Ok(format!(
                     "⚾ {} Commands:
 
 \
-                     🏴‍☠️ Game Info:
+                     {} Game Info:
 \
                      • @{} next game - Full details for next game
 \
@@ -278,12 +295,12 @@ impl BotService {
                      • @{} next game snacks - Get snacks info for next game
 
 \
-                     🏴‍☠️ Team Spirit:
+                     {} Team Spirit:
 \
-                     • @{} lets go pirates - Get a Pirates fact!
+                     • @{} lets go {} - {}
 
 \
-                     🏴‍☠️ Volunteers:
+                     {} Volunteers:
 \
                      • @{} volunteer snacks 2025-01-15 John - Sign up to volunteer
 \
@@ -294,46 +311,53 @@ impl BotService {
 \
                      📋 Categories: time, location, home, snacks, livestream, scoreboard, pitchcount
 \
-                     🏴‍☠️ Raise the Jolly Roger! ⚾",
+                     {} Let's go {}! ⚾",
+                    self.config.groupme_bot_name,
+                    self.config.team_emoji,
                     self.config.groupme_bot_name,
                     self.config.groupme_bot_name,
                     self.config.groupme_bot_name,
+                    self.config.team_emoji,
+                    self.config.groupme_bot_name,
+                    self.config.team_name.to_lowercase(),
+                    team_spirit_text,
+                    self.config.team_emoji,
                     self.config.groupme_bot_name,
                     self.config.groupme_bot_name,
                     self.config.groupme_bot_name,
-                    self.config.groupme_bot_name,
-                    self.config.groupme_bot_name
+                    self.config.team_emoji,
+                    self.config.team_name
                 ))
             }
             BotCommand::RemoveVolunteer(person, role, date) => {
                 let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
                 if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
-                    return Err(BotError::InvalidCommand("🏴‍☠️ Only admins and moderators can remove volunteers".to_string()));
+                    return Err(BotError::InvalidCommand(format!("{} Only admins and moderators can remove volunteers", self.config.team_emoji)));
                 }
-                Ok(format!("🏴‍☠️ Removed {} from {} (date: {:?}) - Feature coming soon!", person, role, date))
+                Ok(format!("{} Removed {} from {} (date: {:?}) - Feature coming soon!", self.config.team_emoji, person, role, date))
             },
             BotCommand::AssignVolunteer(person, role, date) => {
                 let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
                 if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
-                    return Err(BotError::InvalidCommand("🏴‍☠️ Only admins and moderators can assign volunteers".to_string()));
+                    return Err(BotError::InvalidCommand(format!("{} Only admins and moderators can assign volunteers", self.config.team_emoji)));
                 }
-                Ok(format!("🏴‍☠️ Assigned {} to {} (date: {:?}) - Feature coming soon!", person, role, date))
+                Ok(format!("{} Assigned {} to {} (date: {:?}) - Feature coming soon!", self.config.team_emoji, person, role, date))
             },
             BotCommand::AddModerator(new_mod_id) => {
                 let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
                 if !moderators_store.is_admin(user, &self.config.admin_user_id) {
-                    return Err(BotError::InvalidCommand("🏴‍☠️ Only the admin can add moderators".to_string()));
+                    return Err(BotError::InvalidCommand(format!("{} Only the admin can add moderators", self.config.team_emoji)));
                 }
                 moderators_store.add_moderator(new_mod_id.clone()).await;
-                Ok(format!("🏴‍☠️ Added moderator: {}", new_mod_id))
+                Ok(format!("{} Added moderator: {}", self.config.team_emoji, new_mod_id))
             },
-            BotCommand::RemoveModerator(mod_id) => { let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?; if !moderators_store.is_admin(user, &self.config.admin_user_id) { return Err(BotError::InvalidCommand("🏴‍☠️ Only the admin can remove moderators".to_string())); } let removed = moderators_store.remove_moderator(&mod_id).await; if removed { Ok(format!("🏴‍☠️ Removed moderator: {}", mod_id)) } else { Ok(format!("🏴‍☠️ {} was not a moderator", mod_id)) } },
+            BotCommand::RemoveModerator(mod_id) => { let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?; if !moderators_store.is_admin(user, &self.config.admin_user_id) { return Err(BotError::InvalidCommand(format!("{} Only the admin can remove moderators", self.config.team_emoji))); } let removed = moderators_store.remove_moderator(&mod_id).await; if removed { Ok(format!("{} Removed moderator: {}", self.config.team_emoji, mod_id)) } else { Ok(format!("{} {} was not a moderator", self.config.team_emoji, mod_id)) } },
             BotCommand::ListModerators => {
                 let mods = moderators_store.list_moderators().await;
                 if mods.is_empty() {
-                    Ok(format!("🏴‍☠️ No moderators assigned\nAdmin: {}", self.config.admin_user_id))
+                    Ok(format!("{} No moderators assigned\nAdmin: {}", self.config.team_emoji, self.config.admin_user_id))
                 } else {
-                    Ok(format!("🏴‍☠️ Moderators:\n{}\n\nAdmin: {}", mods.join("\n"), self.config.admin_user_id))
+                    Ok(format!("{} Moderators:\n{}\n\nAdmin: {}", self.config.team_emoji, mods.join("\n"), self.config.admin_user_id))
                 }
             },
         }
@@ -404,8 +428,8 @@ impl BotService {
             Some(date) => {
                 match self.find_event_by_date(date).await? {
                     Some(event) => {
-                        let mut response = format!("🏴‍☠️ Volunteer status for {} ({}):\n\n", 
-                                                  date, event.format_matchup());
+                        let mut response = format!("{} Volunteer status for {} ({}):\n\n", 
+                                                  self.config.team_emoji, date, event.format_matchup());
                         response.push_str(&event.data.format_all());
                         response.push_str(&format!("\n{}", event.data.format_volunteer_needs()));
                         Ok(response)
@@ -427,7 +451,7 @@ impl BotService {
                 if upcoming_events.is_empty() {
                     Ok("❌ No upcoming events found.".to_string())
                 } else {
-                    let mut response = "🏴‍☠️ Volunteer status for upcoming events:\n\n".to_string();
+                    let mut response = format!("{} Volunteer status for upcoming events:\n\n", self.config.team_emoji);
                     
                     for (date, event) in upcoming_events.iter().take(5) {
                         response.push_str(&format!("{} ({}):\n", date, event.format_matchup()));
@@ -446,30 +470,3 @@ impl BotService {
     }
 }
 
-// Inline Pirates facts to avoid module import issues
-struct PiratesFacts;
-
-impl PiratesFacts {
-    fn get_team_fact(team_name: &str) -> String {
-        match team_name.to_lowercase().as_str() {
-            "pirates" => {
-                let facts = [
-                    "🏴‍☠️ The Pittsburgh Pirates were the first professional sports team to win a championship via walk-off home run in 1960!",
-                    "⚾ The Pirates were the first MLB team to field an all-minority starting lineup on September 1, 1971!",
-                    "🏴‍☠️ Roberto Clemente was the first Latino player to reach 3,000 hits and was inducted into the Baseball Hall of Fame in 1973!",
-                    "⚾ Three Rivers Stadium was home to the Pirates from 1970-2000 and hosted the 1979 World Series championship!",
-                    "🏴‍☠️ The Pirates' 'We Are Family' team of 1979 came back from a 3-1 deficit to win the World Series!",
-                    "⚾ PNC Park opened in 2001 and is consistently ranked as one of the most beautiful ballparks in baseball!",
-                    "🏴‍☠️ Honus Wagner, the 'Flying Dutchman', played shortstop for the Pirates and led them to their first World Series title in 1909!",
-                    "⚾ The Pirates were founded in 1881, making them one of the oldest franchises in Major League Baseball!",
-                    "🏴‍☠️ The team is called 'Pirates' because they 'pirated' a player from another team in 1891!",
-                    "⚾ The Pirates have won 5 World Series championships: 1909, 1925, 1960, 1971, and 1979!"
-                ];
-                
-                let mut rng = thread_rng();
-                facts.choose(&mut rng).unwrap_or(&facts[0]).to_string()
-            },
-            _ => format!("🏴‍☠️ Ahoy matey! No matter who we're playing, the Pirates spirit lives on! ⚾")
-        }
-    }
-}

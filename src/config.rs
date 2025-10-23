@@ -12,6 +12,11 @@ pub struct Config {
     pub reminder_start_hour: u32,
     pub reminder_end_hour: u32,
     pub admin_user_id: String,
+    // Team customization
+    pub team_name: String,
+    pub team_emoji: String,
+    pub enable_team_facts: bool,
+    pub team_facts_file: Option<String>,
 }
 
 impl Config {
@@ -69,6 +74,19 @@ impl Config {
         let admin_user_id = env::var("ADMIN_USER_ID")
             .map_err(|_| BotError::EnvVar("ADMIN_USER_ID".to_string()))?;
 
+        // Team customization (with defaults)
+        let team_name = env::var("TEAM_NAME")
+            .unwrap_or_else(|_| "Team".to_string());
+        
+        let team_emoji = env::var("TEAM_EMOJI")
+            .unwrap_or_else(|_| "⚾".to_string());
+        
+        let enable_team_facts = env::var("ENABLE_TEAM_FACTS")
+            .unwrap_or_else(|_| "true".to_string())
+            .parse()
+            .unwrap_or(true);
+        
+        let team_facts_file = env::var("TEAM_FACTS_FILE").ok();
 
         Ok(Config {
             groupme_bot_id,
@@ -80,6 +98,10 @@ impl Config {
             reminder_start_hour,
             reminder_end_hour,
             admin_user_id,
+            team_name,
+            team_emoji,
+            enable_team_facts,
+            team_facts_file,
         })
     }
 }
