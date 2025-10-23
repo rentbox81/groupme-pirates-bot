@@ -66,44 +66,91 @@ For those who prefer exact commands:
 - `@PirateBot volunteers` - Show all volunteer needs
 - `@PirateBot volunteers 2025-01-15` - Show needs for specific date
 
-## Quick Deployment
+## Quick Start
+
+### Prerequisites
+
+1. **GroupMe Bot**: Create a bot at [dev.groupme.com/bots](https://dev.groupme.com/bots)
+2. **Google Sheet**: Set up your team data spreadsheet
+3. **Google Cloud**: Service account with Sheets API enabled
+4. **Calendar**: WebCal URL for your team's schedule
+
+### Installation
 
 ```bash
 # 1. Clone the repository
 git clone <your-repo-url>
 cd groupme-pirates-bot
 
-# 2. Set up environment
+# 2. Set up environment variables
 cp .env.template .env
-# Edit .env with your configuration
+# Edit .env with your configuration (see below)
 
-# 3. Add Google service account
+# 3. Add Google service account key
 # Place your service-account.json file in the project root
+# Get from: Google Cloud Console > IAM & Admin > Service Accounts
 
-# 4. Deploy
+# 4. Build and run
 docker compose up -d --build
+
+# 5. Check logs
+docker compose logs -f
+
+# 6. Configure GroupMe callback
+# Set your bot's callback URL to: https://{TEAM_NAME}bot.{BASE_DOMAIN}/webhook
 ```
 
-## Access Points
+### Local Development
 
-- **Webhook**: `https://piratebot.rentbox.us/webhook`
-- **Health Check**: `http://localhost:18080/`
-- **Logs**: `docker compose logs -f`
+```bash
+# Run locally without Docker
+cargo run
+
+# Run tests
+cargo test
+
+# Run with local docker-compose
+docker compose -f deployment-variants/docker-compose.local.yml up -d
+```
 
 ## Configuration
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup instructions.
+### Required Environment Variables
+
+All environment variables are documented in [.env.template](./.env.template). Key required variables:
+
+- **`GROUPME_BOT_ID`** - Your GroupMe bot ID from [dev.groupme.com/bots](https://dev.groupme.com/bots)
+- **`GROUPME_BOT_NAME`** - Bot name (e.g., PirateBot) - used for @mentions
+- **`SHEET_ID`** - Google Sheets ID from your spreadsheet URL
+- **`GOOGLE_API_KEY`** - Google API key with Sheets API enabled
+- **`CALENDAR_WEBCAL_URL`** - Team calendar WebCal URL
+- **`ADMIN_USER_ID`** - GroupMe user ID of the bot administrator
+
+### Optional Environment Variables
+
+- **`PORT`** - Server port (default: 18080)
+- **`RUST_LOG`** - Logging level: info, debug, trace (default: info)
+- **`REMINDER_START_HOUR`** - Start sending reminders (default: 9, 24-hour format)
+- **`REMINDER_END_HOUR`** - Stop sending reminders (default: 21, 24-hour format)
+- **`TEAM_NAME`** - For subdomain (e.g., pirates → piratesbot.yourdomain.com)
+- **`BASE_DOMAIN`** - Your domain for external access
+
+See [.env.template](./.env.template) for complete documentation of all variables.
 
 ### Required Files
-- `.env` - Environment configuration
-- `service-account.json` - Google Cloud service account key
 
-### Environment Variables
-- `GROUPME_BOT_ID` - Your GroupMe bot ID
-- `GROUPME_BOT_NAME` - Bot name (e.g., PirateBot)
-- `SHEET_ID` - Google Sheets ID for team data
-- `CALENDAR_WEBCAL_URL` - Team calendar URL
-- `BASE_DOMAIN` - Your domain for external access
+1. **`.env`** - Environment configuration (copy from .env.template)
+2. **`service-account.json`** - Google Cloud service account key with Sheets API access
+
+## Access Points
+
+- **Webhook**: `https://{TEAM_NAME}bot.{BASE_DOMAIN}/webhook`
+- **Health Check**: `http://localhost:18080/` or `https://{TEAM_NAME}bot.{BASE_DOMAIN}/`
+- **Logs**: `docker compose logs -f`
+
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed production deployment instructions.
 
 ## Development
 

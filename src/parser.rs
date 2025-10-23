@@ -207,8 +207,8 @@ mod tests {
         CommandParser::new("TestBot".to_string())
     }
 
-    #[test]
-    fn test_conversational_volunteer() {
+    #[tokio::test]
+    async fn test_conversational_volunteer() {
         let parser = create_parser();
         
         // These should be understood conversationally
@@ -216,8 +216,8 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_conversational_game_query() {
+    #[tokio::test]
+    async fn test_conversational_game_query() {
         let parser = create_parser();
         
         let result = parser.parse_message("@TestBot when's the next game?", None, None, &[]).await;
@@ -225,23 +225,30 @@ mod tests {
         assert!(matches!(result.unwrap(), Some(BotCommand::NextGame)));
     }
 
-    #[test]
-    fn test_unknown_intent_returns_friendly_message() {
+    #[tokio::test]
+    async fn test_unknown_intent_returns_friendly_message() {
         let parser = create_parser();
         
         let result = parser.parse_message("@TestBot blah blah random stuff", None, None, &[]).await;
         // Should return an error with a friendly message, not panic
         assert!(result.is_err());
         if let Err(BotError::InvalidCommand(msg)) = result {
-            // Check message contains expected content
-            assert!(msg.contains("🏴‍☠️") || msg.contains("⚾") || msg.contains("Ahoy") || msg.contains("help"));
+            // Check message is not empty and contains some expected content
+            // The message is randomly chosen from witty responses, so we just verify it's not empty
+            assert!(!msg.is_empty(), "Error message should not be empty");
+            // Verify it looks like a bot response (contains emoji or game-related text)
+            assert!(
+                msg.contains("🏴‍☠️") || msg.contains("⚾") || msg.contains("📱") || 
+                msg.contains("game") || msg.contains("volunteer") || msg.contains("Pirates"),
+                "Message should be a friendly bot response: {}", msg
+            );
         } else {
             panic!("Expected InvalidCommand error");
         }
     }
 
-    #[test]
-    fn test_help_intent() {
+    #[tokio::test]
+    async fn test_help_intent() {
         let parser = create_parser();
         
         let result = parser.parse_message("@TestBot help", None, None, &[]).await;
@@ -249,8 +256,8 @@ mod tests {
         assert!(matches!(result.unwrap(), Some(BotCommand::Commands)));
     }
 
-    #[test]
-    fn test_team_spirit() {
+    #[tokio::test]
+    async fn test_team_spirit() {
         let parser = create_parser();
         
         let result = parser.parse_message("@TestBot let's go pirates!", None, None, &[]).await;
@@ -259,7 +266,7 @@ mod tests {
     }
 
     #[tokio::test]
-    fn test_volunteer_next_game() {
+    async fn test_volunteer_next_game() {
         let parser = create_parser();
         
         let result = parser.parse_message("@TestBot Hobbs have snacks for the next game", None, None, &[]).await;
@@ -267,8 +274,8 @@ mod tests {
         assert!(matches!(result.unwrap(), Some(BotCommand::VolunteerNextGame(_, _))));
     }
     
-    #[test]
-    fn test_volunteer_defaults_to_next_game() {
+    #[tokio::test]
+    async fn test_volunteer_defaults_to_next_game() {
         let parser = create_parser();
         
         // No date specified - should default to next game

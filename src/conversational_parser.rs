@@ -556,7 +556,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case, None, &[]);
             assert!(matches!(intent, Some(ParsedIntent::Volunteer { .. })));
         }
     }
@@ -573,7 +573,7 @@ mod tests {
         ];
 
         for case in test_cases {
-            let intent = parser.parse_message(case, None);
+            let intent = parser.parse_message(case, None, &[]);
             assert!(matches!(intent, Some(ParsedIntent::GameQuery { .. })));
         }
     }

@@ -3,9 +3,9 @@
 ## High Priority
 
 - [ ] Add deployment script (deploy.sh) with build, test, restart, rollback
-- [ ] Fix duplicate parser test issue (main.rs vs lib.rs)
-- [ ] Update README.md with quick start and env vars
-- [ ] Document all env vars in .env.template
+- [x] Fix duplicate parser test issue (main.rs vs lib.rs)
+- [x] Update README.md with quick start and env vars
+- [x] Document all env vars in .env.template
 
 ## Medium Priority
 
