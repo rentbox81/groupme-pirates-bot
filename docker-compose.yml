@@ -1,0 +1,63 @@
+
+services:
+  groupme-bot:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: unless-stopped
+    ports:
+      - "18080:18080"  # Port mapping for direct access (from override file)
+    networks:
+      - traefik
+    environment:
+      - GOOGLE_SERVICE_ACCOUNT_JSON=/app/service-account.json  # Explicit env var
+      - TZ=America/Chicago  # Set timezone to Central Time (CDT/CST)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+      
+      # Define the network
+      - "traefik.docker.network=traefik"
+      
+      # HTTP router configuration (HTTPS)
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.rule=Host(`${BOT_SUBDOMAIN}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.entrypoints=websecure"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.tls.certresolver=${CERT_RESOLVER}"
+      
+      # HTTP redirect (from prod file)
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.rule=Host(`${BOT_SUBDOMAIN}bot.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.entrypoints=web"
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      
+      # Security headers and rate limiting
+      - "traefik.http.routers.${BOT_SUBDOMAIN}bot.middlewares=security-headers,${BOT_SUBDOMAIN}bot-ratelimit"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Robots-Tag=noindex"
+      - "traefik.http.middlewares.${BOT_SUBDOMAIN}bot-ratelimit.ratelimit.burst=100"
+      - "traefik.http.middlewares.${BOT_SUBDOMAIN}bot-ratelimit.ratelimit.average=50"
+      
+      # Service configuration
+      - "traefik.http.services.${BOT_SUBDOMAIN}bot.loadbalancer.server.port=18080"
+
+networks:
+  traefik:
+    external: true

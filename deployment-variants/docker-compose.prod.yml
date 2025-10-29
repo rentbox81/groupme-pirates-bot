@@ -1,0 +1,45 @@
+services:
+  groupme-bot:
+    build: .
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - traefik
+    volumes:
+      - ./service-account.json:/app/service-account.json:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.rule=Host(`${TEAM_NAME:-team}bot.${BASE_DOMAIN:-example.com}`)"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.entrypoints=websecure"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.${TEAM_NAME:-team}bot.loadbalancer.server.port=18080"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.rule=Host(`${TEAM_NAME:-team}bot.${BASE_DOMAIN:-example.com}`)"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.entrypoints=web"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.${TEAM_NAME:-team}bot.middlewares=security-headers,${TEAM_NAME:-team}bot-ratelimit"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Robots-Tag=noindex"
+      - "traefik.http.middlewares.${TEAM_NAME:-team}bot-ratelimit.ratelimit.burst=100"
+      - "traefik.http.middlewares.${TEAM_NAME:-team}bot-ratelimit.ratelimit.average=50"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+networks:
+  traefik:
+    external: true

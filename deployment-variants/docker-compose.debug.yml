@@ -1,0 +1,6 @@
+services:
+  groupme-bot:
+    image: rentbox81/groupme-pirates-bot:latest
+    volumes:
+      - ./service-account.json:/app/service-account.json:ro
+    command: ["ls", "-l", "/app/service-account.json"]
