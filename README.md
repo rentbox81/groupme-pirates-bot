@@ -52,13 +52,10 @@ The bot now understands natural language! You don't need to remember exact comma
 - `@PirateBot remove @UserName from livestream` - Remove volunteer assignment
 
 ### Message Management (Admin + Moderators)
-Keep your chat tidy by managing bot messages:
+View recent bot activity:
 - `@PirateBot list messages` - Show recent bot messages with IDs
-- `@PirateBot delete message [ID]` - Delete a specific bot message
-- `@PirateBot clean 5 messages` - Delete last 5 bot messages
-- `@PirateBot clean messages` - Delete last 5 bot messages (default)
 
-**Note**: Requires `GROUPME_ACCESS_TOKEN` and `GROUPME_GROUP_ID` in `.env`. See [MESSAGE_MANAGEMENT.md](./MESSAGE_MANAGEMENT.md) for setup.
+**Note**: Requires `GROUPME_ACCESS_TOKEN` and `GROUPME_GROUP_ID` in `.env`. Message deletion is not supported by the GroupMe API and must be done manually through the mobile app. See [GROUPME_API_LIMITATION.md](./GROUPME_API_LIMITATION.md) for details.
 
 ### Team Spirit
 - `@PirateBot let's go pirates!` - Get a Pirates fact
