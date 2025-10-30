@@ -365,20 +365,6 @@ impl BotService {
                 }
                 self.handle_list_bot_messages(count).await
             },
-            BotCommand::DeleteBotMessage(message_id) => {
-                let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
-                if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
-                    return Err(BotError::InvalidCommand(format!("{} Only admins and moderators can delete bot messages", self.config.team_emoji)));
-                }
-                self.handle_delete_bot_message(&message_id).await
-            },
-            BotCommand::CleanBotMessages(count) => {
-                let user = user_id.ok_or(BotError::InvalidCommand("User ID required".to_string()))?;
-                if !moderators_store.is_authorized(user, &self.config.admin_user_id).await {
-                    return Err(BotError::InvalidCommand(format!("{} Only admins and moderators can clean bot messages", self.config.team_emoji)));
-                }
-                self.handle_clean_bot_messages(count).await
-            },
         }
     }
 
@@ -513,60 +499,9 @@ impl BotService {
             };
             response.push_str(&format!("{}. ID: {} - {}\n", i + 1, msg.id, preview));
         }
-        response.push_str(&format!("\n💡 To delete a message: @{} delete message <id>", self.config.groupme_bot_name));
+        response.push_str("\n💡 Note: Messages can only be deleted manually through the GroupMe mobile app.");
         
         Ok(response)
-    }
-    
-    async fn handle_delete_bot_message(&self, message_id: &str) -> Result<String> {
-        // Check if message management is configured
-        if self.config.groupme_access_token.is_none() || self.config.groupme_group_id.is_none() {
-            return Ok(format!("{} Message management is not configured. Set GROUPME_ACCESS_TOKEN and GROUPME_GROUP_ID in .env", self.config.team_emoji));
-        }
-        
-        // Verify the message exists and is from the bot
-        let messages = self.groupme_client.list_messages(100, None).await?;
-        let is_bot_message = messages.iter()
-            .any(|m| m.id == message_id && m.sender_type == "bot");
-        
-        if !is_bot_message {
-            return Ok(format!("{} Message {} not found or is not a bot message.", self.config.team_emoji, message_id));
-        }
-        
-        self.groupme_client.delete_message(message_id).await?;
-        Ok(format!("{} ✅ Deleted message {}", self.config.team_emoji, message_id))
-    }
-    
-    async fn handle_clean_bot_messages(&self, count: usize) -> Result<String> {
-        // Check if message management is configured
-        if self.config.groupme_access_token.is_none() || self.config.groupme_group_id.is_none() {
-            return Ok(format!("{} Message management is not configured. Set GROUPME_ACCESS_TOKEN and GROUPME_GROUP_ID in .env", self.config.team_emoji));
-        }
-        
-        let messages = self.groupme_client.list_messages(100, None).await?;
-        let bot_messages: Vec<_> = messages.iter()
-            .filter(|m| m.sender_type == "bot")
-            .take(count)
-            .collect();
-        
-        if bot_messages.is_empty() {
-            return Ok(format!("{} No bot messages to clean.", self.config.team_emoji));
-        }
-        
-        let mut deleted = 0;
-        let mut failed = 0;
-        
-        for msg in bot_messages {
-            match self.groupme_client.delete_message(&msg.id).await {
-                Ok(_) => deleted += 1,
-                Err(e) => {
-                    warn!("Failed to delete message {}: {}", msg.id, e);
-                    failed += 1;
-                }
-            }
-        }
-        
-        Ok(format!("{} 🧹 Cleaned {} bot message(s). {} failed.", self.config.team_emoji, deleted, failed))
     }
 }
 

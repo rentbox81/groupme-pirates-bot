@@ -93,8 +93,6 @@ pub enum BotCommand {
     RemoveModerator(String), // user_id
     ListModerators,
     ListBotMessages(usize), // count - list recent bot messages
-    DeleteBotMessage(String), // message_id - delete a specific bot message
-    CleanBotMessages(usize), // count - delete last N bot messages
 }
 
 impl EventData {

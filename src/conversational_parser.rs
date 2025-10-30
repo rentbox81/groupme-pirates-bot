@@ -21,8 +21,6 @@ pub enum ParsedIntent {
     RemoveModerator { user_id: String },
     ListModerators,
     ListBotMessages { count: usize },
-    DeleteBotMessage { message_id: String },
-    CleanBotMessages { count: usize },
     ConversationalResponse { message: String },
 }
 
@@ -76,12 +74,6 @@ impl ConversationalParser {
         // Message management commands
         if text_lower.contains("list") && (text_lower.contains("message") || text_lower.contains("bot message")) {
             return self.parse_list_messages(text_lower);
-        }
-        if text_lower.contains("delete") && text_lower.contains("message") {
-            return self.parse_delete_message(text_lower);
-        }
-        if text_lower.contains("clean") && (text_lower.contains("message") || text_lower.contains("bot message")) {
-            return self.parse_clean_messages(text_lower);
         }
 
         if self.is_volunteer_intent(text_lower) {
@@ -557,26 +549,6 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
             .unwrap_or(10); // Default to 10 messages
         
         ParsedIntent::ListBotMessages { count }
-    }
-
-    fn parse_delete_message(&self, text: &str) -> ParsedIntent {
-        // Extract message ID (usually a long number)
-        let words: Vec<&str> = text.split_whitespace().collect();
-        let message_id = words.iter()
-            .find(|w| w.len() > 10 && w.chars().all(|c| c.is_numeric()))
-            .map(|s| s.to_string())
-            .unwrap_or_default();
-        
-        ParsedIntent::DeleteBotMessage { message_id }
-    }
-
-    fn parse_clean_messages(&self, text: &str) -> ParsedIntent {
-        // Extract count if specified (e.g., "clean 5 messages")
-        let count = text.split_whitespace()
-            .find_map(|word| word.parse::<usize>().ok())
-            .unwrap_or(5); // Default to 5 messages
-        
-        ParsedIntent::CleanBotMessages { count }
     }
 }
 

@@ -95,16 +95,6 @@ impl CommandParser {
             ParsedIntent::ListBotMessages { count } => {
                 Ok(Some(BotCommand::ListBotMessages(count)))
             },
-            ParsedIntent::DeleteBotMessage { message_id } => {
-                if message_id.is_empty() {
-                    Err(BotError::InvalidCommand("⚾ Please provide a message ID to delete. Use 'list messages' to see message IDs.".to_string()))
-                } else {
-                    Ok(Some(BotCommand::DeleteBotMessage(message_id)))
-                }
-            },
-            ParsedIntent::CleanBotMessages { count } => {
-                Ok(Some(BotCommand::CleanBotMessages(count)))
-            },
             ParsedIntent::Unknown => {
                 // Return a witty response instead of an error
                 Err(BotError::InvalidCommand(self.conversational_parser.get_witty_response()))

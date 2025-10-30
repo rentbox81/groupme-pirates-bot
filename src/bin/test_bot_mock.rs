@@ -161,13 +161,7 @@ fn handle_command_mock(command: BotCommand, bot_name: &str) -> String {
             "🏴‍☠️ Moderators (Mock):\n- user123\n- user456\n\nAdmin: admin_user".to_string()
         }
         BotCommand::ListBotMessages(count) => {
-            format!("🏴‍☠️ Recent bot messages (Mock - last {}):\n\n1. ID: 12345678901234 - ⚾ Next Game: Pirates vs Cardinals...\n2. ID: 12345678901235 - ✅ John has been assigned to snacks...\n\n💡 To delete a message: @PirateBot delete message <id>", count)
-        }
-        BotCommand::DeleteBotMessage(message_id) => {
-            format!("✅ Deleted message {} (Mock)", message_id)
-        }
-        BotCommand::CleanBotMessages(count) => {
-            format!("🧹 Cleaned {} bot message(s) (Mock)", count)
+            format!("🏴‍☠️ Recent bot messages (Mock - last {}):\n\n1. ID: 12345678901234 - ⚾ Next Game: Pirates vs Cardinals...\n2. ID: 12345678901235 - ✅ John has been assigned to snacks...\n\n💡 Note: Messages can only be deleted manually through the GroupMe mobile app.", count)
         }
     }
 }

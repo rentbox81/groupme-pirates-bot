@@ -89,34 +89,4 @@ impl GroupMeClient {
             Err(BotError::GroupMeApi(format!("GroupMe API returned {}: {}", status, error_text)))
         }
     }
-
-    /// Delete a specific message from the group (requires access token and group ID)
-    pub async fn delete_message(&self, message_id: &str) -> Result<()> {
-        let access_token = self.config.groupme_access_token.as_ref()
-            .ok_or_else(|| BotError::Config("GROUPME_ACCESS_TOKEN not configured".to_string()))?;
-        let group_id = self.config.groupme_group_id.as_ref()
-            .ok_or_else(|| BotError::Config("GROUPME_GROUP_ID not configured".to_string()))?;
-
-        let url = format!(
-            "https://api.groupme.com/v3/groups/{}/messages/{}?token={}",
-            group_id, message_id, access_token
-        );
-
-        info!("Deleting message {} from GroupMe", message_id);
-
-        let response = self.client
-            .delete(&url)
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            info!("Successfully deleted message {}", message_id);
-            Ok(())
-        } else {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            error!("Failed to delete message. Status: {} - {}", status, error_text);
-            Err(BotError::GroupMeApi(format!("GroupMe API returned {}: {}", status, error_text)))
-        }
-    }
 }
