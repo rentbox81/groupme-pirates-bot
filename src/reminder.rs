@@ -84,25 +84,49 @@ impl ReminderScheduler {
 
         let now = Local::now().naive_local();
         
-        // ALWAYS fetch fresh data for reminders (don't use cache)
-        // This ensures we have the latest game info even if calendar/sheets were updated
+        // ALWAYS fetch fresh data for reminders
+        // Use find_next_event logic manually or adapt to new structure
+        // Since find_next_event now handles the logic of finding the next relevant game, we can use it.
+        // But reminder scheduler logic was previously iterating.
+        // Let's rewrite to use correlate_data() which returns HashMap<Date, Vec<Event>>
+        
         match self.bot_service.correlate_data().await {
-            Ok(events) => {
-                // Find next event from fresh data
-                let today = chrono::Utc::now().date_naive();
-                let mut next_event: Option<crate::models::CorrelatedEvent> = None;
-                let mut min_diff_days = i64::MAX;
+            Ok(events_map) => {
+                // Flatten and sort all events
+                let mut all_events: Vec<crate::models::CorrelatedEvent> = events_map.values().flatten().cloned().collect();
+                all_events.sort_by(|a, b| a.event_date.cmp(&b.event_date));
                 
-                for (date, event) in events.iter() {
-                    let diff = (*date - today).num_days();
-                    if diff >= 0 && diff < min_diff_days {
-                        min_diff_days = diff;
-                        next_event = Some(event.clone());
+                let today = chrono::Utc::now().date_naive();
+                
+                // Find next event (same logic as service.rs basically)
+                let mut next_event: Option<crate::models::CorrelatedEvent> = None;
+                
+                for event in all_events {
+                    if event.event_date >= today {
+                        // Check if time has passed if it is today
+                        if event.event_date == today {
+                             // Try parse time
+                             if let Ok(dt) = self.parse_game_datetime(&event.event_date, &event.data.time) {
+                                 if dt > now {
+                                     next_event = Some(event);
+                                     break; 
+                                 }
+                             } else {
+                                 // If can't parse, assume future
+                                 next_event = Some(event);
+                                 break;
+                             }
+                        } else {
+                            // Future date
+                            next_event = Some(event);
+                            break;
+                        }
                     }
                 }
                 
                 if let Some(event) = next_event {
-                    let game_key = format!("{}", event.event_date);
+                    // Use a unique key including time if possible, or just date/time string
+                    let game_key = format!("{}T{}", event.event_date, event.data.time);
                     
                     // Skip reminder if time is TBD/unknown
                     if event.data.time.trim().is_empty() || event.data.time.trim().eq_ignore_ascii_case("TBD") {
@@ -172,7 +196,7 @@ impl ReminderScheduler {
         let mut message = format!("⏰ Game Reminder! 24 hours until:\n\n{} {}\n", self.config.team_emoji, matchup);
         message.push_str(&event.data.format_all());
         message.push_str("\n");
-        message.push_str(&event.data.format_volunteer_needs());
+        message.push_str(&event.data.format_volunteer_needs(&self.config.team_name));
         
         self.bot_service.send_response(&message).await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)

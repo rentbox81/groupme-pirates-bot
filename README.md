@@ -1,279 +1,226 @@
-# GroupMe Team Bot ⚾
-
-A Rust-based GroupMe bot that integrates with Google Sheets and Google Calendar to provide team scheduling and management. **Now with conversational AI and full team customization!**
-
-> **Supports any team!** Built-in facts for Pirates, Yankees, Red Sox, Cubs, Dodgers, Giants, Braves, and more. Easy customization for youth leagues and custom teams.
-
-## Features
-
-### 🔐 Admin & Moderator System
-- **@Mention Support**: `@PirateBot add moderator @UserName` - Uses GroupMe mentions to identify users
-- **Role Management**: Admin can add/remove moderators, moderators can assign/remove volunteers
-- **Persistent Storage**: Moderator list saved to `data/moderators.json` and survives restarts
-- **Authorization**: Protected commands require admin or moderator permissions
-
-- 🤖 **Conversational Interface**: Talk naturally to the bot - no strict commands needed!
-- 📊 **Google Sheets API**: Fetches team data and schedules  
-- 📅 **Calendar Integration**: Shows upcoming games and events
-- 🌐 **Web Interface**: Webhook endpoint for GroupMe notifications
-- 🔒 **Secure**: Built-in authentication and rate limiting
-- 🐳 **Containerized**: Easy deployment with Docker
-
-## Conversational Interface
-
-The bot now understands natural language! You don't need to remember exact commands.
-
-### Natural Volunteer Sign-ups
-- `@PirateBot I've got snacks` - Sign up for snacks
-- `@PirateBot I can do livestream for Saturday` - Volunteer for a specific date
-- `@PirateBot put me down for scoreboard` - Sign up for scoreboard
-- `@PirateBot I'll bring snacks next game for John` - Sign someone else up
-
-### Natural Game Queries
-- `@PirateBot when's the next game?` - Get next game info
-- `@PirateBot where are we playing?` - Location info
-- `@PirateBot what time is the game?` - Game time
-- `@PirateBot show me the next 3 games` - Multiple games
-
-### Volunteer Status
-- `@PirateBot who's bringing snacks?` - Check volunteer status
-- `@PirateBot do we need anything?` - See what roles are open
-- `@PirateBot volunteers for Saturday` - Check specific date
-
-### Team Spirit
-
-### Admin Commands (Admin Only)
-- `@PirateBot add moderator @UserName` - Add a moderator using @mention
-- `@PirateBot remove moderator @UserName` - Remove a moderator
-- `@PirateBot list moderators` - Show all moderators and admin
-
-### Moderator Commands (Admin + Moderators)
-- `@PirateBot assign @UserName to snacks` - Assign volunteer
-- `@PirateBot remove @UserName from livestream` - Remove volunteer assignment
-
-### Message Management (Admin + Moderators)
-View recent bot activity:
-- `@PirateBot list messages` - Show recent bot messages with IDs
-
-**Note**: Requires `GROUPME_ACCESS_TOKEN` and `GROUPME_GROUP_ID` in `.env`. Message deletion is not supported by the GroupMe API and must be done manually through the mobile app. See [GROUPME_API_LIMITATION.md](./GROUPME_API_LIMITATION.md) for details.
-
-### Team Spirit
-- `@PirateBot let's go pirates!` - Get a Pirates fact
-- `@PirateBot go pirates!` - Team motivation
-
-### Need Help?
-- `@PirateBot help` - See what the bot can do
-- Just mention `@PirateBot` - The bot will guide you
-
-## Traditional Commands (Still Supported)
-
-For those who prefer exact commands:
-
-- `@PirateBot next game` - Show upcoming game details
-- `@PirateBot next 3 games` - Show next 3 games
-- `@PirateBot next game snacks` - Get specific category info
-- `@PirateBot volunteer snacks 2025-01-15 John` - Sign up to volunteer
-- `@PirateBot volunteers` - Show all volunteer needs
-- `@PirateBot volunteers 2025-01-15` - Show needs for specific date
-
-## Quick Start
-
-### Prerequisites
-
-1. **GroupMe Bot**: Create a bot at [dev.groupme.com/bots](https://dev.groupme.com/bots)
-2. **Google Sheet**: Set up your team data spreadsheet
-3. **Google Cloud**: Service account with Sheets API enabled
-4. **Calendar**: WebCal URL for your team's schedule
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone <your-repo-url>
-cd groupme-pirates-bot
-
-# 2. Set up environment variables
-cp .env.template .env
-# Edit .env with your configuration (see below)
-
-# 3. Add Google service account key
-# Place your service-account.json file in the project root
-# Get from: Google Cloud Console > IAM & Admin > Service Accounts
-
-# 4. Build and run
-docker compose up -d --build
-
-# 5. Check logs
-docker compose logs -f
-
-# 6. Configure GroupMe callback
-# Set your bot's callback URL to: https://{TEAM_NAME}bot.{BASE_DOMAIN}/webhook
-```
-
-### Local Development
-
-```bash
-# Run locally without Docker
-cargo run
-
-# Run tests
-cargo test
-
-# Run with local docker-compose
-docker compose -f deployment-variants/docker-compose.local.yml up -d
-```
-
-## Configuration
-
-### Required Environment Variables
-
-All environment variables are documented in [.env.template](./.env.template). Key required variables:
-
-- **`GROUPME_BOT_ID`** - Your GroupMe bot ID from [dev.groupme.com/bots](https://dev.groupme.com/bots)
-- **`GROUPME_BOT_NAME`** - Bot name (e.g., PirateBot) - used for @mentions
-- **`SHEET_ID`** - Google Sheets ID from your spreadsheet URL
-- **`GOOGLE_API_KEY`** - Google API key with Sheets API enabled
-- **`CALENDAR_WEBCAL_URL`** - Team calendar WebCal URL
-- **`ADMIN_USER_ID`** - GroupMe user ID of the bot administrator
-
-### Team Customization
-
-Make the bot yours! Customize team name, emoji, and facts:
-
-- **`TEAM_NAME`** - Your team's name (default: "Team")
-  - Examples: `Pirates`, `Dragons`, `Eagles`, `Cubs`, `Yankees`
-  - Used in messages, help text, and team spirit commands
-
-- **`TEAM_EMOJI`** - Team emoji used throughout messages (default: ⚾)
-  - Examples: 🏴‍☠️ (Pirates), 🐉 (Dragons), 🦅 (Eagles), 🐻 (Cubs)
-  - Appears in game announcements, volunteer status, and more
-
-- **`ENABLE_TEAM_FACTS`** - Enable team facts feature (default: true)
-  - Set to `false` to disable "lets go [team]" facts
-  
-- **`TEAM_FACTS_FILE`** - Path to custom facts JSON (optional)
-  - Provide your own team facts (see `team-facts.example.json`)
-  - If not specified, uses built-in facts for supported MLB teams
-
-**Built-in Team Facts:**
-- 🏴‍☠️ Pirates, 🐛 Yankees, 🧦 Red Sox, 🐻 Cubs
-- 💙 Dodgers, 🧡 Giants, 🪓 Braves
-- Custom teams get generic encouraging messages
-
-**Custom Facts Example:**
-```json
-{
-  "team_name": "Dragons",
-  "facts": [
-    "🐉 The Dragons won their first championship in 2020!",
-    "⚾ Our mascot Spike has been with us since 2015!"
-  ]
-}
-```
-
-### Optional Environment Variables
-
-- **`PORT`** - Server port (default: 18080)
-- **`RUST_LOG`** - Logging level: info, debug, trace (default: info)
-- **`REMINDER_START_HOUR`** - Start sending reminders (default: 9, 24-hour format)
-- **`REMINDER_END_HOUR`** - Stop sending reminders (default: 21, 24-hour format)
-- **`BASE_DOMAIN`** - Your domain for external access
-
-See [.env.template](./.env.template) for complete documentation of all variables.
-
-### Required Files
-
-1. **`.env`** - Environment configuration (copy from .env.template)
-2. **`service-account.json`** - Google Cloud service account key with Sheets API access
-
-## Access Points
-
-- **Webhook**: `https://{TEAM_NAME}bot.{BASE_DOMAIN}/webhook`
-- **Health Check**: `http://localhost:18080/` or `https://{TEAM_NAME}bot.{BASE_DOMAIN}/`
-- **Logs**: `docker compose logs -f`
-
-## Deployment
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed production deployment instructions.
-
-## Development
-
-```bash
-# Local development
-docker compose -f deployment-variants/docker-compose.local.yml up -d
-
-# View logs
-docker compose logs -f
-
-# Rebuild after changes
-docker compose up -d --build
-
-# Run tests
-cargo test
-```
-
-## Architecture
-
-- **Runtime**: Rust with Actix-web framework
-- **AI**: Natural language understanding with intent detection
-- **APIs**: GroupMe Webhook + Google Sheets + Calendar
-- **Deployment**: Docker with Traefik reverse proxy
-- **Security**: Rate limiting, HTTPS, security headers
-
-## What's New
-
-### v0.3.0 - Team Customization
-- 🎉 **Universal team support** - Works for ANY team, not just Pirates!
-- 🏴‍☠️ **Custom team emoji** - Choose your team's emoji for all messages
-- 📝 **Built-in MLB facts** - 7 major league teams have curated facts
-- 📚 **Custom facts** - Add your own team facts via JSON file
-- ⚙️ **Configurable** - Team name, emoji, and facts all customizable
-- 🔘 **Graceful fallback** - Generic encouraging messages for any team
-
-### v0.2.1 - Moderator Persistence
-- 💾 Moderator list persists across bot restarts
-- 📂 Automatic data directory creation
-- 🔄 Load moderators from data/moderators.json on startup
-- ✅ Add/remove moderators saved immediately
-
-### v0.2.0 - Conversational AI
-- 🎯 Natural language understanding
-- 💬 No more strict command syntax
-- 😊 Friendly error messages (no technical codes!)
-- 🤖 Smart intent detection for volunteers and queries
-- 📱 Witty responses for unclear requests
-- 🗓️ Understands dates like "Saturday", "tomorrow", "next week"
-
-## Troubleshooting
-
-1. **Check container status**: `docker compose ps`
-2. **View logs**: `docker compose logs --tail 50`
-3. **Test webhook**: See [DEPLOYMENT.md](./DEPLOYMENT.md#troubleshooting)
-4. **Restart**: `docker compose restart`
-
-## Examples of What Works Now
-
-```
-User: @PirateBot I've got snacks
-Bot: ✅ John has been assigned to snacks for 2025-10-15!
-
-User: @PirateBot when's the next game?
-Bot: 🏴‍☠️ Next Game: Saturday Game
-     Date: 2025-10-15
-     Time: 10:00 AM
-     Location: Field 3 (https://maps.google.com/...)
-     ...
-
-User: @PirateBot blah blah blah
-Bot: 🏴‍☠️ Ahoy! I'm not quite sure what you're asking, but I'm here to help! 
-     Try asking about the next game or volunteer to bring snacks! 🍪
-```
-
-## Team
-
-Built for the Pirates baseball team! ⚾🏴‍☠️
+# GroupMe Sports Team Bot ⚾
+
+A conversational GroupMe bot designed for sports team management. It handles scheduling, volunteer assignments (snacks, scoreboard, etc.), and provides weather forecasts—all powered by Google Sheets and a natural language interface.
+
+## 🌟 Features
+
+- **📅 Automated Schedule**: Reads game schedule directly from a Google Sheet.
+- **🗣️ Conversational Interface**: Talk naturally (e.g., "Who's on snacks?", "Where's the next game?").
+- **🌤️ Weather Integration**: Automatic weather forecasts for game times and locations using Open-Meteo.
+- **🤝 Volunteer Management**: Tracks volunteers for Snacks, Livestream, Scoreboard, and Pitch Count.
+  - *Smart Logic*: "Scoreboard" is only requested for Away games!
+- **🏴‍☠️ Team Customization**: Configurable team name, emoji, and "hype" facts.
+- **🔐 Role-Based Access**: Admin and Moderator privileges for sensitive commands.
 
 ---
 
-**Status**: ✅ Fully operational with conversational AI
-**Last Updated**: October 2025
+## 🚀 Deployment Guide (Step-by-Step)
+
+Follow these steps to get your bot up and running.
+
+### 1. Prerequisites
+
+1.  **GroupMe Bot**:
+    - Go to [dev.groupme.com](https://dev.groupme.com/bots).
+    - Log in and create a new bot.
+    - Select the group you want the bot to live in.
+    - **Note the Bot ID** (you'll need this).
+
+2.  **Google Cloud Service Account** (for Sheets access):
+    - Go to [Google Cloud Console](https://console.cloud.google.com/).
+    - Create a new project (or select existing).
+    - Enable the **Google Sheets API**.
+    - Go to **IAM & Admin > Service Accounts**.
+    - Create a Service Account.
+    - Create a **JSON Key** for this account and download it.
+    - Rename the file to `service-account.json`.
+
+3.  **Google Sheet Setup**:
+    - Create a Google Sheet with the following columns (Order matters!):
+      - **A**: Date (YYYY-MM-DD)
+      - **B**: Time (e.g., 10:00 AM)
+      - **C**: Location (e.g., Field 1)
+      - **D**: Home Team (Used to detect Home/Away)
+      - **E**: Snacks (Volunteer Name)
+      - **F**: Livestream (Volunteer Name)
+      - **G**: Scoreboard (Volunteer Name)
+      - **H**: Pitch Count (Volunteer Name)
+    - **Share** the sheet with the *Service Account Email* (found in your `service-account.json`) giving it **Editor** access.
+    - **Note the Sheet ID** from the URL (e.g., `https://docs.google.com/spreadsheets/d/THIS_PART_IS_THE_ID/edit`).
+
+### 2. Installation
+
+Clone the repository to your server or local machine:
+
+```bash
+git clone <your-repo-url>
+cd groupme-pirates-bot
+```
+
+### 3. Configuration
+
+1.  **Service Account**:
+    Move your downloaded `service-account.json` into the project root directory.
+    ```bash
+    mv /path/to/downloaded/key.json ./service-account.json
+    ```
+
+2.  **Environment Variables**:
+    Copy the template and edit it:
+    ```bash
+    cp .env.template .env
+    nano .env
+    ```
+
+    **Critical Settings to Change:**
+    - `GROUPME_BOT_ID`: Your Bot ID from Step 1.
+    - `GROUPME_BOT_NAME`: Name users will use to address the bot (e.g., "PirateBot").
+    - `SHEET_ID`: Your Google Sheet ID from Step 1.
+    - `GOOGLE_API_KEY`: API Key (optional if using Service Account, but recommended as backup).
+    - `ADMIN_USER_ID`: Your GroupMe User ID (visit `https://api.groupme.com/v3/users/me` with an access token to find this, or check logs after sending a message).
+    - `TEAM_NAME`: Your team name (e.g., "Pirates").
+    - `TEAM_EMOJI`: Emoji to use in messages (e.g., "🏴‍☠️").
+
+### 4. Build and Run
+
+Run with Docker Compose (Recommended):
+
+```bash
+docker compose up -d --build
+```
+
+### 5. Verify
+
+Check the logs to ensure everything started correctly:
+
+```bash
+docker compose logs -f
+```
+
+You should see "Configuration loaded successfully" and "Starting GroupMe bot...".
+
+Test it in your GroupMe group:
+> "@PirateBot next game"
+
+### 6. External Access (Traefik)
+
+The `docker-compose.yml` is pre-configured for Traefik. To expose the bot externally (e.g., via a reverse proxy):
+
+1.  **Ensure Traefik is running** on your host and connected to the `traefik` Docker network.
+2.  **Configure `.env`**:
+    - `BOT_SUBDOMAIN`: e.g., `pirates` (results in `piratesbot.example.com`).
+    - `BASE_DOMAIN`: e.g., `example.com`.
+    - `CERT_RESOLVER`: e.g., `letsencrypt`.
+3.  **Deploy**:
+    ```bash
+    docker compose up -d
+    ```
+
+**Example Traefik Configuration:**
+If you have Traefik set up on your host (e.g., 192.168.1.221), the bot will automatically register itself using these labels in `docker-compose.yml`:
+
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.http.routers.piratesbot.rule=Host(`piratesbot.example.com`)"
+  - "traefik.http.routers.piratesbot.entrypoints=websecure"
+  - "traefik.http.routers.piratesbot.tls.certresolver=letsencrypt"
+```
+
+The bot expects the `traefik` network to exist external to this compose stack:
+```bash
+docker network create traefik
+```
+
+### 7. Configure GroupMe Callback URL
+
+**Crucial Step**: GroupMe needs to know where to send messages.
+
+1.  Go back to [dev.groupme.com/bots](https://dev.groupme.com/bots).
+2.  Edit your bot.
+3.  Set the **Callback URL** to your deployed endpoint:
+    
+    ```
+    https://<BOT_SUBDOMAIN>bot.<BASE_DOMAIN>/webhook
+    ```
+    
+    *Example:* `https://piratesbot.example.com/webhook`
+
+    > **Note**: If you are testing locally (without Traefik/SSL), you will need to use a tool like **ngrok** to create a public HTTPS URL and use that instead.
+
+---
+
+## 🛠️ Usage
+
+### 🗣️ Natural Language Commands
+Users can ask questions naturally. The bot uses fuzzy matching to understand intent.
+
+- **Game Info**:
+  - "When is the next game?"
+  - "Where are we playing?"
+  - "What's the weather look like?"
+  - "Show me the next 3 games"
+
+- **Volunteering**:
+  - "I can do snacks"
+  - "Put me down for scoreboard"
+  - "I'll do livestream for Saturday"
+  - "Who is doing pitch count?"
+  - "Do we need volunteers?"
+
+- **Team Spirit**:
+  - "Let's go Pirates!" (Responds with a team fact or hype message)
+
+### 👮 Admin & Moderator Commands
+Requires the user to be the Admin (set in `.env`) or a listed Moderator.
+
+- **Manage Moderators**:
+  - "@PirateBot add moderator @JohnDoe"
+  - "@PirateBot remove moderator @JohnDoe"
+  - "@PirateBot list moderators"
+
+- **Manage Volunteers (Force Assign/Remove)**:
+  - "@PirateBot assign @Jane to snacks"
+  - "@PirateBot remove @Jane from livestream"
+
+---
+
+## ⚙️ Advanced Customization
+
+### Team Facts
+You can customize the "hype" facts for your team.
+- **Built-in**: Facts for Pirates, Yankees, Red Sox, Cubs, Dodgers, Giants, Braves.
+- **Custom**: Create a `data/team-facts.json` file and mount it, or just use the generic fallback.
+  - Set `ENABLE_TEAM_FACTS=true` in `.env`.
+
+### Weather
+Weather data is sourced from [Open-Meteo](https://open-meteo.com/).
+- No API key required.
+- Automatically geocodes the "Location" field from your schedule.
+- Provides temperature, condition, and precipitation chance.
+
+### Home/Away Logic
+The bot determines if a game is **Home** or **Away** to decide if a "Scoreboard" volunteer is needed.
+- It checks the **Home Team** column (Column D) in your Google Sheet.
+- If the cell contains "Home" or "H", or matches your `TEAM_NAME`, it's a **Home Game**.
+- **Home Games**: Scoreboard volunteer is marked as "Not Needed".
+- **Away Games**: Scoreboard volunteer is marked as "⚠️ NEEDED".
+
+---
+
+## 👩‍💻 Development
+
+To run locally without Docker:
+
+```bash
+# Install dependencies (Rust)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Run
+cargo run
+```
+
+To run tests:
+```bash
+cargo test
+```

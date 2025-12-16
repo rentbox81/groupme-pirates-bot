@@ -11,10 +11,11 @@ pub struct EventData {
     pub livestream: Option<String>,
     pub scoreboard: Option<String>,
     pub pitch_count: Option<String>,
+    pub gamechanger: Option<String>,
 }
 
 impl EventData {
-    pub fn new(date: NaiveDate, time: String, location: String, home_team: String, snacks: String, livestream: String, scoreboard: String, pitch_count: String) -> Self {
+    pub fn new(date: NaiveDate, time: String, location: String, home_team: String, snacks: String, livestream: String, scoreboard: String, pitch_count: String, gamechanger: String) -> Self {
         Self {
             date,
             time,
@@ -24,6 +25,7 @@ impl EventData {
             livestream: if livestream.is_empty() { None } else { Some(livestream) },
             scoreboard: if scoreboard.is_empty() { None } else { Some(scoreboard) },
             pitch_count: if pitch_count.is_empty() { None } else { Some(pitch_count) },
+            gamechanger: if gamechanger.is_empty() { None } else { Some(gamechanger) },
         }
     }
 }
@@ -116,17 +118,32 @@ impl EventData {
             "livestream" => self.livestream.as_ref(),
             "scoreboard" => self.scoreboard.as_ref(),
             "pitchcount" | "pitch_count" => self.pitch_count.as_ref(),
+            "gamechanger" => self.gamechanger.as_ref(),
             _ => None,
         }
     }
     
+    /// Check if the game is a Home game
+    pub fn is_home_game(&self) -> bool {
+        let ht = self.home_team.trim().to_lowercase();
+        ht == "home" || ht == "h" || ht.contains("home")
+    }
+    
     /// Check if a volunteer role is available (not assigned)
-    pub fn is_role_available(&self, role: &str) -> bool {
+    pub fn is_role_available(&self, role: &str, my_team_name: &str) -> bool {
         match role.to_lowercase().as_str() {
             "snacks" => self.snacks.is_none(),
             "livestream" => self.livestream.is_none(), 
-            "scoreboard" => self.scoreboard.is_none(),
+            "scoreboard" => {
+                // Scoreboard only needed for AWAY games
+                if self.is_home_game() {
+                    false
+                } else {
+                    self.scoreboard.is_none()
+                }
+            },
             "pitchcount" | "pitch_count" => self.pitch_count.is_none(),
+            "gamechanger" => self.gamechanger.is_none(),
             _ => false,
         }
     }
@@ -150,6 +167,10 @@ impl EventData {
                 self.pitch_count = Some(person.to_string());
                 true
             },
+            "gamechanger" if self.gamechanger.is_none() => {
+                self.gamechanger = Some(person.to_string());
+                true
+            },
             _ => false,
         }
     }
@@ -160,22 +181,31 @@ impl EventData {
         details.push_str(&format!("Date: {}\n", self.date.format("%Y-%m-%d")));
         details.push_str(&format!("Time: {}\n", self.time));
         details.push_str(&format!("Location: {}\n", self.format_location_with_link()));
-        details.push_str(&format!("Home Team: {}\n", self.home_team));
+        details.push_str(&format!("Home/Away: {}\n", self.home_team));
         
         details.push_str(&format!("Snacks: {}\n", 
             self.snacks.as_ref().unwrap_or(&"⚠️ NEEDED".to_string())));
         details.push_str(&format!("Livestream: {}\n", 
             self.livestream.as_ref().unwrap_or(&"⚠️ NEEDED".to_string())));
-        details.push_str(&format!("Scoreboard: {}\n", 
-            self.scoreboard.as_ref().unwrap_or(&"⚠️ NEEDED".to_string())));
+        
+        let scoreboard_status = if self.is_home_game() {
+            self.scoreboard.as_ref().map(|s| s.clone()).unwrap_or_else(|| "Not Needed (Home Game)".to_string())
+        } else {
+            self.scoreboard.as_ref().unwrap_or(&"⚠️ NEEDED".to_string()).clone()
+        };
+        details.push_str(&format!("Scoreboard: {}\n", scoreboard_status));
+
         details.push_str(&format!("Pitch Count: {}\n", 
             self.pitch_count.as_ref().unwrap_or(&"⚠️ NEEDED".to_string())));
+            
+        details.push_str(&format!("GameChanger: {}\n", 
+            self.gamechanger.as_ref().unwrap_or(&"⚠️ NEEDED".to_string())));
         
         details
     }
     
     /// Format available volunteer opportunities
-    pub fn format_volunteer_needs(&self) -> String {
+    pub fn format_volunteer_needs(&self, my_team_name: &str) -> String {
         let mut needs = Vec::new();
         
         if self.snacks.is_none() {
@@ -184,11 +214,18 @@ impl EventData {
         if self.livestream.is_none() {
             needs.push("livestream");
         }
-        if self.scoreboard.is_none() {
+        
+        // Scoreboard only needed if NOT home game
+        if self.scoreboard.is_none() && !self.is_home_game() {
             needs.push("scoreboard");
         }
+        
         if self.pitch_count.is_none() {
             needs.push("pitch_count");
+        }
+        
+        if self.gamechanger.is_none() {
+            needs.push("gamechanger");
         }
         
         if needs.is_empty() {

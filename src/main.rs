@@ -7,6 +7,7 @@ pub mod error;
 pub mod models;
 pub mod google_client;
 pub mod groupme_client;
+pub mod weather_client;
 pub mod service;
 pub mod parser;
 pub mod conversational_parser;

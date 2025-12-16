@@ -27,7 +27,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              &config.google_api_key[..10], 
              &config.google_api_key[config.google_api_key.len()-4..]);
     println!("  Sheet ID: {}", config.sheet_id);
-    println!("  Calendar Webcal URL: {:?}\n", config.calendar_webcal_url);
 
     // Test API key validity (only for Sheets, since we use webcal for calendar)
     println!("🔑 Testing API Key validity with Sheets API...");
@@ -40,7 +39,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Test Calendar API access
+    // Test Calendar API access - DISABLED
+    println!("📅 Calendar API access disabled");
+    /*
     println!("📅 Testing Calendar API access...");
     match test_calendar_access(&config).await {
         Ok(calendar_info) => {
@@ -49,9 +50,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => {
             println!("❌ Calendar API access failed: {}", e);
-            if let Some(url) = &config.calendar_webcal_url { print_calendar_help(url); }
+            // if let Some(url) = &config.calendar_webcal_url { print_calendar_help(url); }
         }
     }
+    */
 
     // Test Sheets API access
     println!("\n📊 Testing Sheets API access...");
@@ -69,6 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🎯 Testing with GoogleClient...");
     let google_client = GoogleClient::new(config);
     
+    /*
     match google_client.get_calendar_events().await {
         Ok(events) => {
             println!("✅ Calendar events retrieved: {} events", events.len());
@@ -83,13 +86,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to get calendar events: {}", e);
         }
     }
+    */
 
     match google_client.get_sheets_data().await {
         Ok(data) => {
             println!("✅ Sheets data retrieved: {} rows", data.len());
-            for (i, (date, title, location, snacks, _livestream, _scoreboard, _pitch_count, home_team)) in data.iter().take(3).enumerate() {
+            for (i, (date, time, location, home_team, snacks, _livestream, _scoreboard, _pitch_count, _gamechanger)) in data.iter().take(3).enumerate() {
                 let snacks_display = if snacks.trim().is_empty() { "NEEDED" } else { snacks };
-                println!("  {}. {} - {} at {} ({}) - Snacks: {}", i+1, date, title, location, home_team, snacks_display);
+                println!("  {}. {} - {} at {} (Home/Away: {}) - Snacks: {}", i+1, date, time, location, home_team, snacks_display);
             }
             if data.len() > 3 {
                 println!("  ... and {} more rows", data.len() - 3);
@@ -104,26 +108,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+/*
 async fn test_calendar_access(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
     
     // Test webcal URL access
-    let https_url = config.calendar_webcal_url.as_ref().unwrap().replace("webcal://", "https://");
+    // let https_url = config.calendar_webcal_url.as_ref().unwrap().replace("webcal://", "https://");
     
-    let response = client.get(&https_url).send().await?;
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("Webcal URL request failed ({}): {}", status, error_text).into());
-    }
+    // let response = client.get(&https_url).send().await?;
+    // if !response.status().is_success() {
+    //     let status = response.status();
+    //     let error_text = response.text().await.unwrap_or_default();
+    //     return Err(format!("Webcal URL request failed ({}): {}", status, error_text).into());
+    // }
     
-    let ical_text = response.text().await?;
-    let line_count = ical_text.lines().count();
-    let has_vcalendar = ical_text.contains("BEGIN:VCALENDAR");
-    let has_events = ical_text.contains("BEGIN:VEVENT");
+    // let ical_text = response.text().await?;
+    // let line_count = ical_text.lines().count();
+    // let has_vcalendar = ical_text.contains("BEGIN:VCALENDAR");
+    // let has_events = ical_text.contains("BEGIN:VEVENT");
     
-    Ok(format!("iCal data: {} lines, has calendar: {}, has events: {}", line_count, has_vcalendar, has_events))
+    // Ok(format!("iCal data: {} lines, has calendar: {}, has events: {}", line_count, has_vcalendar, has_events))
+    Ok("Disabled".to_string())
 }
+*/
 
 async fn test_sheets_access(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
@@ -157,6 +164,7 @@ fn print_api_key_help() {
     println!("5. Ensure your Google Sheet is publicly viewable (Anyone with link can view)");
 }
 
+/*
 fn print_calendar_help(webcal_url: &str) {
     println!("\n🆘 Calendar Access Help:");
     println!("Webcal URL: {}", webcal_url);
@@ -176,6 +184,7 @@ fn print_calendar_help(webcal_url: &str) {
         println!("📝 Please use the webcal:// format for the URL");
     }
 }
+*/
 
 fn print_sheets_help(sheet_id: &str) {
     println!("\n🆘 Sheets Access Help:");

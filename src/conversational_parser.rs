@@ -76,18 +76,19 @@ impl ConversationalParser {
             return self.parse_list_messages(text_lower);
         }
 
-        if self.is_volunteer_intent(text_lower) {
-            return self.parse_volunteer_intent(text_lower, original_text, sender_name);
-        }
-
-        // Game query intent detection
+        // Game query intent detection (check before volunteer intent to avoid "next game snacks" being parsed as volunteering)
         if self.is_game_query_intent(text_lower) {
             return self.parse_game_query_intent(text_lower);
         }
 
-        // Volunteer query intent detection
+        // Volunteer query intent detection (check before volunteer action)
         if self.is_volunteer_query_intent(text_lower) {
             return self.parse_volunteer_query_intent(text_lower);
+        }
+
+        // Volunteer intent detection
+        if self.is_volunteer_intent(text_lower) {
+            return self.parse_volunteer_intent(text_lower, original_text, sender_name);
         }
 
         // Team spirit intent detection
@@ -143,8 +144,9 @@ impl ConversationalParser {
         let role_mappings = [
             (vec!["snacks", "snack", "food", "treats"], "snacks"),
             (vec!["livestream", "stream", "streaming", "live"], "livestream"),
-            (vec!["scoreboard", "score", "scoring", "gamechanger", "game changer"], "scoreboard"),
+            (vec!["scoreboard", "score", "scoring"], "scoreboard"),
             (vec!["pitchcount", "pitch count", "pitch", "pitches"], "pitchcount"),
+            (vec!["gamechanger", "game changer", "gc", "scorebook"], "gamechanger"),
         ];
 
         let mut found_roles = Vec::new();
@@ -265,22 +267,51 @@ fn extract_person_name(&self, text: &str) -> Option<String> {
             }
         }
 
-        // Try to parse explicit dates
+        // Pre-process common date formats like 12-27 to 12/27/YYYY for easier parsing
+        let mut processed_words = Vec::new();
+        let words: Vec<&str> = text.split_whitespace().collect();
+        
+        for word in words {
+            // Handle MM-DD format (e.g. 12-27 -> 12/27/YYYY)
+            if word.contains('-') && word.split('-').count() == 2 {
+                let parts: Vec<&str> = word.split('-').collect();
+                if let (Ok(_), Ok(_)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    processed_words.push(format!("{}/{}/{}", parts[0], parts[1], today.year()));
+                    continue;
+                }
+            }
+            // Handle MM-DD-YYYY format (e.g. 12-27-2025 -> 12/27/2025)
+            if word.contains('-') && word.split('-').count() == 3 {
+                let parts: Vec<&str> = word.split('-').collect();
+                if let (Ok(_), Ok(_), Ok(_)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>(), parts[2].parse::<i32>()) {
+                    processed_words.push(format!("{}/{}/{}", parts[0], parts[1], parts[2]));
+                    continue;
+                }
+            }
+            
+            processed_words.push(word.to_string());
+        }
+
         let date_formats = [
             "%Y-%m-%d", "%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%Y/%m/%d",
             "%m/%d", "%m-%d" // Month/day without year
         ];
 
-        let words: Vec<&str> = text.split_whitespace().collect();
-        for word in words {
+        for word in processed_words {
             for format in &date_formats {
                 // Handle dates without year by adding current year
                 if format.contains("%m/%d") && !format.contains("%Y") {
                     let with_year = format!("{}/{}", word, today.year());
                     if let Ok(date) = NaiveDate::parse_from_str(&with_year, "%m/%d/%Y") {
+                        // If date is in the past, maybe they mean next year?
+                        if date < today {
+                             if let Ok(next_year_date) = NaiveDate::parse_from_str(&format!("{}/{}", word, today.year() + 1), "%m/%d/%Y") {
+                                 return Some(next_year_date);
+                             }
+                        }
                         return Some(date);
                     }
-                } else if let Ok(date) = NaiveDate::parse_from_str(word, format) {
+                } else if let Ok(date) = NaiveDate::parse_from_str(&word, format) {
                     return Some(date);
                 }
             }
